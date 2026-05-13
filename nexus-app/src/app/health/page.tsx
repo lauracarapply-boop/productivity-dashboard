@@ -95,99 +95,17 @@ function fmtShort(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-const DOCTORS: Doctor[] = [
-  { id: '1', name: 'Dr. Sarah Mitchell',  specialty: 'General Practitioner', phone: '+1 (207) 555-0142', lastVisit: monthsAgo(15), intervalMonths: 12, color: '#3F5F5A' },
-  { id: '2', name: 'Dr. James Kowalski',  specialty: 'Dentist',               phone: '+1 (207) 555-0298', lastVisit: monthsAgo(8),  intervalMonths: 6,  color: '#0EA5E9' },
-  { id: '3', name: 'Dr. Priya Sharma',    specialty: 'Dermatologist',          phone: '+1 (207) 555-0371', lastVisit: monthsAgo(3),  intervalMonths: 12, color: '#8B5CF6' },
-  { id: '4', name: 'Dr. Marcus Webb',     specialty: 'Ophthalmologist',        phone: '+1 (207) 555-0485', lastVisit: monthsAgo(26), intervalMonths: 24, color: '#F59E0B' },
-  { id: '5', name: 'Dr. Elena Rossi',     specialty: 'Gynecologist',           phone: '+1 (207) 555-0519', lastVisit: monthsAgo(14), intervalMonths: 12, color: '#EC4899' },
-]
+const DOCTORS: Doctor[] = []
 
-const INIT_APPOINTMENTS: Appointment[] = [
-  { id: 'a1', doctorName: 'Dr. Priya Sharma',   specialty: 'Dermatologist', date: daysFromNow(16), time: '2:00 PM',  type: 'Follow-up', notes: 'Annual skin check', upcoming: true },
-  { id: 'a2', doctorName: 'Dr. James Kowalski', specialty: 'Dentist',       date: daysFromNow(23), time: '10:30 AM', type: 'Cleaning',   notes: 'Regular cleaning and check-up', upcoming: true },
-]
+const INIT_APPOINTMENTS: Appointment[] = []
 
 const TODAY_DOW = TODAY.getDay() // 0=Sun
 
-const WORKOUT_WEEK: WorkoutDay[] = [
-  {
-    day: 'Monday', short: 'Mon', name: 'Upper Body', isRest: false,
-    completed: TODAY_DOW > 1,
-    exercises: [
-      { name: 'Bench Press',     sets: 4, reps: '8–10',  weight: '60 kg' },
-      { name: 'Shoulder Press',  sets: 3, reps: '10–12', weight: '30 kg' },
-      { name: 'Tricep Dips',     sets: 3, reps: '12–15' },
-      { name: 'Bicep Curls',     sets: 3, reps: '12',    weight: '15 kg' },
-    ],
-  },
-  {
-    day: 'Tuesday', short: 'Tue', name: 'Cardio', isRest: false,
-    completed: TODAY_DOW > 2,
-    exercises: [
-      { name: '5 km Run',   sets: 1, reps: '~30 min' },
-      { name: 'Jump Rope',  sets: 3, reps: '5 min' },
-    ],
-  },
-  {
-    day: 'Wednesday', short: 'Wed', name: 'Lower Body', isRest: false,
-    completed: TODAY_DOW > 3,
-    exercises: [
-      { name: 'Squats',       sets: 4, reps: '8–10', weight: '80 kg' },
-      { name: 'Deadlifts',    sets: 3, reps: '6–8',  weight: '90 kg' },
-      { name: 'Lunges',       sets: 3, reps: '12 ea' },
-      { name: 'Calf Raises',  sets: 3, reps: '20' },
-    ],
-  },
-  { day: 'Thursday', short: 'Thu', name: 'Rest Day',        isRest: true,  completed: TODAY_DOW > 4, exercises: [] },
-  {
-    day: 'Friday', short: 'Fri', name: 'Full Body', isRest: false,
-    completed: TODAY_DOW > 5,
-    exercises: [
-      { name: 'Pull-ups',  sets: 4, reps: '8–10' },
-      { name: 'Push-ups',  sets: 3, reps: '15–20' },
-      { name: 'Planks',    sets: 3, reps: '60 sec' },
-      { name: 'Burpees',   sets: 3, reps: '10' },
-    ],
-  },
-  {
-    day: 'Saturday', short: 'Sat', name: 'Yoga & Stretch', isRest: false,
-    completed: false,
-    exercises: [
-      { name: 'Yoga Flow',         sets: 1, reps: '45 min' },
-      { name: 'Full Body Stretch', sets: 1, reps: '15 min' },
-    ],
-  },
-  { day: 'Sunday', short: 'Sun', name: 'Rest Day', isRest: true, completed: false, exercises: [] },
-]
+const WORKOUT_WEEK: WorkoutDay[] = []
 
 const NUTRITION_GOALS = { calories: 2000, protein: 120, carbs: 200, fat: 65, water: 8 }
 
-const INIT_MEALS: Meal[] = [
-  {
-    id: 'm1', name: 'Breakfast', time: '7:30 AM',
-    items: [
-      { name: 'Oatmeal with berries', calories: 320, protein: 12, carbs: 58, fat: 6 },
-      { name: 'Greek yogurt',          calories: 100, protein: 17, carbs: 6,  fat: 0 },
-      { name: 'Black coffee',          calories: 5,   protein: 0,  carbs: 0,  fat: 0 },
-    ],
-  },
-  {
-    id: 'm2', name: 'Lunch', time: '12:30 PM',
-    items: [
-      { name: 'Grilled chicken breast', calories: 280, protein: 52, carbs: 0,  fat: 6 },
-      { name: 'Brown rice',              calories: 215, protein: 4,  carbs: 45, fat: 2 },
-      { name: 'Steamed broccoli',        calories: 55,  protein: 4,  carbs: 10, fat: 1 },
-    ],
-  },
-  {
-    id: 'm3', name: 'Snack', time: '3:30 PM',
-    items: [
-      { name: 'Banana',                 calories: 89, protein: 1, carbs: 23, fat: 0 },
-      { name: 'Peanut butter (1 tbsp)', calories: 94, protein: 4, carbs: 3,  fat: 8 },
-    ],
-  },
-]
+const INIT_MEALS: Meal[] = []
 
 const APPT_TYPES = ['Check-up', 'Annual Physical', 'Follow-up', 'Cleaning', 'Consultation', 'Vaccination', 'Exam', 'Other']
 
@@ -196,7 +114,7 @@ export default function HealthPage() {
   const [appointments, setAppointments] = useState(INIT_APPOINTMENTS)
   const [workoutDays, setWorkoutDays] = useState(WORKOUT_WEEK)
   const [meals] = useState(INIT_MEALS)
-  const [waterGlasses, setWaterGlasses] = useState(3)
+  const [waterGlasses, setWaterGlasses] = useState(0)
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | null>(null)
   const [showAddAppt, setShowAddAppt] = useState(false)
   const [apptSuccess, setApptSuccess] = useState(false)

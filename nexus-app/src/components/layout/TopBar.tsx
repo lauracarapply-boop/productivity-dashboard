@@ -1,18 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Search, Zap, Bot, Bell, ChevronDown, CheckSquare, Calendar, AlertTriangle, Mail } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Search, Zap, Bot, Bell, ChevronDown } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { mockUser } from '@/lib/mock-data'
 import SearchModal from '../modals/SearchModal'
 import { cn } from '@/lib/utils'
 
-const MOCK_NOTIFICATIONS = [
-  { id: '1', icon: AlertTriangle, color: 'text-red-500 bg-red-50', title: 'Assignment due tomorrow', body: 'Machine Learning Problem Set 3 is due May 13', time: '2h ago', unread: true },
-  { id: '2', icon: Calendar, color: 'text-indigo-500 bg-indigo-50', title: 'Class starting in 30 min', body: 'Comparative Politics — Room 204', time: '28m ago', unread: true },
-  { id: '3', icon: Mail, color: 'text-violet-500 bg-violet-50', title: 'New email from Prof. Thompson', body: 'Re: Office hours this week', time: '1h ago', unread: true },
-  { id: '4', icon: CheckSquare, color: 'text-emerald-500 bg-emerald-50', title: 'Task completed', body: 'French vocabulary quiz marked as done', time: '3h ago', unread: false },
-]
+const MOCK_NOTIFICATIONS: { id: string; icon: React.ElementType; color: string; title: string; body: string; time: string; unread: boolean }[] = []
 
 export default function TopBar() {
   const { toggleAIPanel, setQuickCaptureOpen, aiPanelOpen } = useApp()

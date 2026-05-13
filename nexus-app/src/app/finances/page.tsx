@@ -40,39 +40,20 @@ interface SavingsGoal {
 
 function d(y: number, m: number, day: number) { return new Date(y, m - 1, day) }
 
-const INIT_TRANSACTIONS: Transaction[] = [
-  { id: 't1',  type: 'income',  amount: 2500,  category: 'Salary',       description: 'Monthly salary',               date: d(2026, 5,  1), icon: '💼' },
-  { id: 't2',  type: 'income',  amount: 300,   category: 'Freelance',    description: 'Design project payment',       date: d(2026, 5,  3), icon: '💻' },
-  { id: 't3',  type: 'income',  amount: 150,   category: 'Part-time',    description: 'Library assistant — bi-weekly',date: d(2026, 5,  8), icon: '📖' },
-  { id: 't4',  type: 'expense', amount: 800,   category: 'Housing',      description: 'May rent',                     date: d(2026, 5,  1), icon: '🏠' },
-  { id: 't5',  type: 'expense', amount: 12.99, category: 'Subscriptions',description: 'Netflix',                      date: d(2026, 5,  2), icon: '📺' },
-  { id: 't6',  type: 'expense', amount: 65.40, category: 'Groceries',    description: 'Whole Foods',                  date: d(2026, 5,  4), icon: '🛒' },
-  { id: 't7',  type: 'expense', amount: 18.50, category: 'Food & Dining',description: 'Chipotle',                     date: d(2026, 5,  5), icon: '🌮' },
-  { id: 't8',  type: 'expense', amount: 4.75,  category: 'Food & Dining',description: 'Coffee — Blue Bottle',         date: d(2026, 5,  6), icon: '☕' },
-  { id: 't9',  type: 'expense', amount: 22.00, category: 'Transport',    description: 'Uber — Campus to town',        date: d(2026, 5,  7), icon: '🚗' },
-  { id: 't10', type: 'expense', amount: 34.99, category: 'Books',        description: 'Textbook for Econ 201',        date: d(2026, 5,  8), icon: '📚' },
-  { id: 't11', type: 'expense', amount: 30,    category: 'Health',       description: 'Gym membership',               date: d(2026, 5,  1), icon: '💪' },
-  { id: 't12', type: 'expense', amount: 48.00, category: 'Groceries',    description: "Trader Joe's",                 date: d(2026, 5, 10), icon: '🛒' },
-  { id: 't13', type: 'expense', amount: 7.99,  category: 'Subscriptions',description: 'Spotify',                      date: d(2026, 5,  5), icon: '🎵' },
-  { id: 't14', type: 'expense', amount: 25.00, category: 'Transport',    description: 'Bus pass top-up',              date: d(2026, 5,  3), icon: '🚌' },
-]
+const INIT_TRANSACTIONS: Transaction[] = []
 
 const BUDGET_CATEGORIES: BudgetCategory[] = [
-  { name: 'Housing',      budgeted: 800, spent: 800,    color: '#3F5F5A', icon: '🏠' },
-  { name: 'Groceries',    budgeted: 200, spent: 113.40, color: '#10B981', icon: '🛒' },
-  { name: 'Food & Dining',budgeted: 150, spent: 23.25,  color: '#F59E0B', icon: '🍽️' },
-  { name: 'Transport',    budgeted: 100, spent: 47.00,  color: '#0EA5E9', icon: '🚗' },
-  { name: 'Books',        budgeted: 100, spent: 34.99,  color: '#8B5CF6', icon: '📚' },
-  { name: 'Subscriptions',budgeted: 50,  spent: 20.98,  color: '#EC4899', icon: '📱' },
-  { name: 'Health',       budgeted: 80,  spent: 30,     color: '#EF4444', icon: '💊' },
-  { name: 'Entertainment',budgeted: 80,  spent: 0,      color: '#14B8A6', icon: '🎬' },
+  { name: 'Housing',      budgeted: 800, spent: 0, color: '#3F5F5A', icon: '🏠' },
+  { name: 'Groceries',    budgeted: 200, spent: 0, color: '#10B981', icon: '🛒' },
+  { name: 'Food & Dining',budgeted: 150, spent: 0, color: '#F59E0B', icon: '🍽️' },
+  { name: 'Transport',    budgeted: 100, spent: 0, color: '#0EA5E9', icon: '🚗' },
+  { name: 'Books',        budgeted: 100, spent: 0, color: '#8B5CF6', icon: '📚' },
+  { name: 'Subscriptions',budgeted: 50,  spent: 0, color: '#EC4899', icon: '📱' },
+  { name: 'Health',       budgeted: 80,  spent: 0, color: '#EF4444', icon: '💊' },
+  { name: 'Entertainment',budgeted: 80,  spent: 0, color: '#14B8A6', icon: '🎬' },
 ]
 
-const INIT_GOALS: SavingsGoal[] = [
-  { id: 'g1', name: 'Emergency Fund', target: 5000, saved: 2800, deadline: 'Dec 2026', icon: '🛡️', color: '#3F5F5A' },
-  { id: 'g2', name: 'Europe Trip',    target: 3000, saved: 1200, deadline: 'Aug 2027', icon: '✈️', color: '#10B981' },
-  { id: 'g3', name: 'New MacBook',    target: 1500, saved: 800,  deadline: 'Sep 2026', icon: '💻', color: '#F59E0B' },
-]
+const INIT_GOALS: SavingsGoal[] = []
 
 const EXPENSE_CATS = ['Housing','Groceries','Food & Dining','Transport','Books','Subscriptions','Health','Entertainment','Shopping','Other']
 const INCOME_CATS  = ['Salary','Freelance','Part-time','Gift','Refund','Other']

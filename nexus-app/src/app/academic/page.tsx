@@ -70,52 +70,19 @@ interface AtlanticArticle {
 
 // ── Mock Data ──────────────────────────────────────────────────
 
-const ACADEMIC_EVENTS: AcademicEvent[] = [
-  { id: 'ae1', title: 'CS Research Symposium – Spring Presentations', date: 'May 13', time: '2:00 PM', location: 'Druckenmiller Hall 020', type: 'Academic', source: 'campusgroups', url: 'https://bowdoin.campusgroups.com/events', organizer: 'CS Department' },
-  { id: 'ae2', title: 'Office Hours – Prof. Thompson (ML)', date: 'May 13', time: '3:00 PM', location: 'Zoom (Teams)', type: 'Office Hours', source: 'teams', url: 'https://teams.cloud.microsoft/', isOnline: true, organizer: 'Prof. Thompson' },
-  { id: 'ae3', title: 'Bowdoin Sustainability Forum', date: 'May 14', time: '5:30 PM', location: 'Smith Union 220', type: 'Event', source: 'campusgroups', url: 'https://bowdoin.campusgroups.com/events', organizer: 'Sustainability Club' },
-  { id: 'ae4', title: 'Spring Concert – Bowdoin Orchestra', date: 'May 14', time: '7:00 PM', location: 'Pickard Theater', type: 'Performance', source: 'tickets', url: 'https://bowdointickets.universitytickets.com/', organizer: 'Music Department' },
-  { id: 'ae5', title: 'Study Group – ML Midterm Prep', date: 'May 16', time: '4:00 PM', location: 'Library Room B', type: 'Study', source: 'teams', url: 'https://teams.cloud.microsoft/', isOnline: false, organizer: 'Study Group' },
-  { id: 'ae6', title: 'Career Fair – Tech & Finance', date: 'May 16', time: '10:00 AM', location: 'Watson Arena', type: 'Career', source: 'campusgroups', url: 'https://bowdoin.campusgroups.com/events', organizer: 'Career Planning' },
-  { id: 'ae7', title: 'Bates-Bowdoin Lacrosse Match', date: 'May 17', time: '1:00 PM', location: 'Pickard Field', type: 'Athletics', source: 'tickets', url: 'https://bowdointickets.universitytickets.com/', organizer: 'Athletics' },
-  { id: 'ae8', title: 'French Language Exchange Meetup', date: 'May 18', time: '6:00 PM', location: 'Moulton Union Café', type: 'Language', source: 'campusgroups', url: 'https://bowdoin.campusgroups.com/events', organizer: 'French Club' },
-  { id: 'ae9', title: 'Data Science Workshop – Intro to R', date: 'May 19', time: '2:00 PM', location: 'Zoom (Teams)', type: 'Workshop', source: 'teams', url: 'https://teams.cloud.microsoft/', isOnline: true, organizer: 'Data Science Club' },
-  { id: 'ae10', title: 'Canvas – Assignment: Comparative Politics Essay Due', date: 'May 15', time: '11:59 PM', location: 'Online', type: 'Deadline', source: 'canvas', url: 'https://bowdoin.instructure.com/', isOnline: true, organizer: 'Prof. Silva' },
-]
+const ACADEMIC_EVENTS: AcademicEvent[] = []
 
-const JOB_LISTINGS: JobListing[] = [
-  { id: 'j1', title: 'Research Assistant – Cognitive Science Lab', org: 'Bowdoin College', type: 'research', location: 'On campus', deadline: 'May 20', pay: '$14/hr', source: 'workday', url: 'https://www.myworkday.com/bowdoin/d/task/1422$2251.htmld', tags: ['research', 'part-time', 'cognitive science'], isNew: true },
-  { id: 'j2', title: 'Software Engineering Intern – Summer 2026', org: 'HubSpot', type: 'internship', location: 'Boston, MA (Hybrid)', deadline: 'May 25', pay: '$35/hr', source: 'handshake', url: 'https://bowdoin.joinhandshake.com/explore', tags: ['engineering', 'SWE', 'internship'], isNew: true },
-  { id: 'j3', title: 'IT Help Desk Assistant', org: 'Bowdoin IT Services', type: 'on-campus', location: 'On campus', deadline: 'May 30', pay: '$13/hr', source: 'workday', url: 'https://www.myworkday.com/bowdoin/d/task/1422$2251.htmld', tags: ['IT', 'on-campus', 'part-time'] },
-  { id: 'j4', title: 'Data Science Intern – Analytics Team', org: 'Wayfair', type: 'internship', location: 'Boston, MA', deadline: 'May 22', pay: '$32/hr', source: 'handshake', url: 'https://bowdoin.joinhandshake.com/explore', tags: ['data science', 'Python', 'analytics'], isNew: true },
-  { id: 'j5', title: 'Library Student Worker', org: 'Hawthorne-Longfellow Library', type: 'on-campus', location: 'On campus', deadline: 'Jun 1', pay: '$12/hr', source: 'workday', url: 'https://www.myworkday.com/bowdoin/d/task/1422$2251.htmld', tags: ['library', 'flexible hours'] },
-  { id: 'j6', title: 'Product Management Intern', org: 'Fidelity Investments', type: 'internship', location: 'Boston, MA', deadline: 'May 28', pay: '$30/hr', source: 'handshake', url: 'https://bowdoin.joinhandshake.com/explore', tags: ['PM', 'finance', 'tech'] },
-  { id: 'j7', title: 'Social Media & Marketing Assistant', org: 'Bowdoin Communications', type: 'on-campus', location: 'On campus', deadline: 'May 31', pay: '$13.50/hr', source: 'workday', url: 'https://www.myworkday.com/bowdoin/d/task/1422$2251.htmld', tags: ['marketing', 'social media', 'content'], isNew: true },
-  { id: 'j8', title: 'Machine Learning Research Intern', org: 'MIT CSAIL (via Handshake)', type: 'research', location: 'Cambridge, MA', deadline: 'May 21', pay: '$28/hr', source: 'handshake', url: 'https://bowdoin.joinhandshake.com/explore', tags: ['ML', 'research', 'Python', 'AI'], isNew: true },
-]
+const JOB_LISTINGS: JobListing[] = []
 
-const ATLANTIC_ARTICLES: AtlanticArticle[] = [
-  { id: 'a1', title: 'The Quiet Collapse of the American Middle Class', author: 'Annie Lowrey', section: 'Economy', readTime: '8 min', url: 'https://www.theatlantic.com/economy/', preview: 'For decades, economists promised that growth would lift all boats. Then it didn\'t. What went wrong, and what comes next.', isNew: true },
-  { id: 'a2', title: 'AI Is Coming for White-Collar Work. This Is What Happens Next.', author: 'Derek Thompson', section: 'Technology', readTime: '12 min', url: 'https://www.theatlantic.com/technology/', preview: 'The disruption of professional work is already underway. But the story is more complicated than either the optimists or pessimists suggest.', isNew: true },
-  { id: 'a3', title: 'Why Young People Are Abandoning Traditional Religion — and What They\'re Finding Instead', author: 'Tara Isabella Burton', section: 'Ideas', readTime: '10 min', url: 'https://www.theatlantic.com/ideas/', preview: 'A new study reveals how Gen Z is reshaping spiritual life in America, blending ancient practices with modern identity.', isNew: true },
-  { id: 'a4', title: 'The Climate Technology That Actually Works', author: 'Robinson Meyer', section: 'Science', readTime: '7 min', url: 'https://www.theatlantic.com/science/', preview: 'Amid the noise of climate debate, some solutions are quietly working. Here\'s what the data actually shows.', isNew: false },
-  { id: 'a5', title: 'The Strange Afterlife of the Liberal Arts Degree', author: 'Graeme Wood', section: 'Education', readTime: '9 min', url: 'https://www.theatlantic.com/education/', preview: 'Once dismissed as impractical, the humanities degree is having an unexpected moment — in Silicon Valley of all places.', isNew: false },
-]
+const ATLANTIC_ARTICLES: AtlanticArticle[] = []
 
-const CANVAS_NOTIFICATIONS = [
-  { id: 'cn1', course: 'Machine Learning (CS 301)', message: 'New assignment posted: Problem Set 3 — Due May 13', type: 'assignment', urgent: true },
-  { id: 'cn2', course: 'Comparative Politics (GOVT 240)', message: 'Grade posted: Essay 2 — 91/100', type: 'grade', urgent: false },
-  { id: 'cn3', course: 'Data Science Foundations', message: 'New announcement: Lab 3 rubric uploaded', type: 'announcement', urgent: false },
-  { id: 'cn4', course: 'Linear Algebra (MATH 225)', message: 'New discussion: Midterm review questions', type: 'discussion', urgent: false },
-]
+const CANVAS_NOTIFICATIONS: { id: string; course: string; message: string; type: string; urgent: boolean }[] = []
 
 const INTEGRATIONS_DATA: Integration[] = [
-  { id: 'canvas', name: 'Canvas (Instructure)', description: 'Courses, assignments, grades, announcements', url: 'https://bowdoin.instructure.com/', icon: '🎓', color: 'bg-red-50 border-red-200 text-red-700', connected: false, dataTypes: ['Assignments', 'Grades', 'Announcements', 'Calendar'] },
+  { id: 'canvas', name: 'Canvas (Instructure)', description: 'Courses, assignments, grades, announcements', url: '', icon: '🎓', color: 'bg-red-50 border-red-200 text-red-700', connected: false, dataTypes: ['Assignments', 'Grades', 'Announcements', 'Calendar'] },
   { id: 'teams', name: 'Microsoft Teams', description: 'Online events, office hours, team channels', url: 'https://teams.cloud.microsoft/', icon: '💼', color: 'bg-indigo-50 border-indigo-200 text-indigo-700', connected: false, dataTypes: ['Meetings', 'Events', 'Tasks', 'Files'] },
-  { id: 'handshake', name: 'Handshake', description: 'Jobs, internships, employer events', url: 'https://bowdoin.joinhandshake.com/explore', icon: '🤝', color: 'bg-violet-50 border-violet-200 text-violet-700', connected: false, dataTypes: ['Job listings', 'Internships', 'Events', 'Applications'] },
-  { id: 'workday', name: 'Workday (Bowdoin)', description: 'On-campus jobs, HR, financial aid', url: 'https://www.myworkday.com/bowdoin/d/task/1422$2251.htmld', icon: '🏢', color: 'bg-blue-50 border-blue-200 text-blue-700', connected: false, dataTypes: ['On-campus jobs', 'Payroll', 'Financial aid'] },
-  { id: 'campusgroups', name: 'Campus Groups', description: 'Campus events, clubs, RSVPs', url: 'https://bowdoin.campusgroups.com/events', icon: '🎪', color: 'bg-emerald-50 border-emerald-200 text-emerald-700', connected: false, dataTypes: ['Events', 'Clubs', 'RSVPs', 'Organizations'] },
-  { id: 'tickets', name: 'Bowdoin Tickets', description: 'Athletics, performances, campus events', url: 'https://bowdointickets.universitytickets.com/', icon: '🎫', color: 'bg-amber-50 border-amber-200 text-amber-700', connected: false, dataTypes: ['Athletics', 'Performances', 'Tickets', 'Schedule'] },
+  { id: 'handshake', name: 'Handshake', description: 'Jobs, internships, employer events', url: 'https://joinhandshake.com/', icon: '🤝', color: 'bg-violet-50 border-violet-200 text-violet-700', connected: false, dataTypes: ['Job listings', 'Internships', 'Events', 'Applications'] },
+  { id: 'campusgroups', name: 'Campus Groups', description: 'Campus events, clubs, RSVPs', url: '', icon: '🎪', color: 'bg-emerald-50 border-emerald-200 text-emerald-700', connected: false, dataTypes: ['Events', 'Clubs', 'RSVPs', 'Organizations'] },
   { id: 'atlantic', name: 'The Atlantic', description: 'Daily articles and long-form reads', url: 'https://www.theatlantic.com/', icon: '📰', color: 'bg-slate-50 border-slate-200 text-slate-700', connected: false, dataTypes: ['Articles', 'Daily digest', 'Sections'] },
 ]
 
@@ -217,7 +184,7 @@ export default function AcademicPage() {
             Academic Hub
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Bowdoin College · Spring 2026 ·{' '}
+            Academic Hub ·{' '}
             <span className={cn('font-medium', connectedCount > 0 ? 'text-emerald-600' : 'text-amber-600')}>
               {connectedCount}/{integrations.length} integrations connected
             </span>

@@ -30,50 +30,7 @@ interface MockEmail {
   account: 'gmail' | 'outlook'
 }
 
-const MOCK_EMAILS: MockEmail[] = [
-  {
-    id: 'e1', from: 'Prof. Silva', fromEmail: 'silva@university.edu',
-    subject: 'Office Hours Change – May 14',
-    preview: 'Hi Laura, I\'m moving my office hours this week to Wednesday at 2pm instead of Thursday.',
-    body: 'Hi Laura,\n\nI\'m moving my office hours this week to Wednesday May 14 at 2pm in Room 310 instead of Thursday.\n\nPlease let me know if you need to reschedule.\n\nBest,\nProf. Silva',
-    time: '9:32 AM', unread: true, starred: false, important: true, hasEvent: true, needsReply: true, account: 'gmail',
-  },
-  {
-    id: 'e2', from: 'Internship Program', fromEmail: 'internships@corp.com',
-    subject: 'Application Update – Data Science Intern',
-    preview: 'Congratulations! We would like to invite you to a virtual interview on May 20 at 10am.',
-    body: 'Dear Laura,\n\nCongratulations! We reviewed your application for the Data Science Internship and would like to invite you to a virtual interview.\n\nDate: May 20, 2026\nTime: 10:00 AM\nPlatform: Zoom (link will be sent separately)\n\nPlease confirm your availability.\n\nBest regards,\nThe Recruitment Team',
-    time: '8:15 AM', unread: true, starred: true, important: true, hasEvent: true, needsReply: true, account: 'gmail',
-  },
-  {
-    id: 'e3', from: 'Prof. Thompson', fromEmail: 'thompson@university.edu',
-    subject: 'Problem Set 3 Grades Posted',
-    preview: 'Problem Set 3 grades have been posted on the course portal. Class average was 84%.',
-    body: 'Hi class,\n\nProblem Set 3 grades have been posted on the course portal. The class average was 84%. Solutions will be reviewed in Thursday\'s class.\n\nProf. Thompson',
-    time: 'Yesterday', unread: false, starred: false, important: false, account: 'gmail',
-  },
-  {
-    id: 'e4', from: 'Study Group', fromEmail: 'studygroup@university.edu',
-    subject: 'Study Session Friday 4pm – Library Room B',
-    preview: 'Hey everyone, study session for the ML midterm on Friday at 4pm in Library Room B.',
-    body: 'Hey everyone,\n\nStudy session for the ML midterm on Friday May 16 at 4pm in Library Room B.\n\nBring your notes and problem sets!\n\nCheers',
-    time: 'Yesterday', unread: true, starred: false, important: false, hasEvent: true, account: 'outlook',
-  },
-  {
-    id: 'e5', from: 'Campus Bursar', fromEmail: 'bursar@university.edu',
-    subject: 'Tuition Payment Reminder – Due May 30',
-    preview: 'This is a reminder that your tuition payment is due on May 30, 2026.',
-    body: 'Dear Laura,\n\nThis is a reminder that your tuition payment for Spring 2026 is due on May 30, 2026.\n\nPlease log into the student portal to complete your payment.\n\nBursar\'s Office',
-    time: 'May 10', unread: false, starred: false, important: false, hasTask: true, account: 'gmail',
-  },
-  {
-    id: 'e6', from: 'Advisor Dr. Matos', fromEmail: 'matos@university.edu',
-    subject: 'Semester Review Meeting',
-    preview: 'Laura, let\'s schedule a 30-min check-in. How\'s May 15 at 11am?',
-    body: 'Laura,\n\nLet\'s schedule a 30-min check-in to review your academic progress.\n\nHow\'s Thursday May 15 at 11am in my office (Hall 205)?\n\nDr. Matos',
-    time: 'May 9', unread: false, starred: true, important: true, hasEvent: true, needsReply: true, account: 'outlook',
-  },
-]
+const MOCK_EMAILS: MockEmail[] = []
 
 const ACCOUNT_COLORS = { gmail: 'text-red-500 bg-red-50', outlook: 'text-blue-500 bg-blue-50' }
 
