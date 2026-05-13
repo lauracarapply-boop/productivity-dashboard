@@ -12,25 +12,26 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('error')) setError('Sign-in failed. Please try again.')
 
-    // With implicit flow, Supabase puts tokens in the URL hash after OAuth.
-    // onAuthStateChange fires automatically when it detects them.
     const supabase = createClient()
+
+    // Supabase automatically exchanges the code/token from the URL via detectSessionInUrl.
+    // When it succeeds, onAuthStateChange fires with SIGNED_IN.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         setLoading(true)
-        // Store Google provider tokens in HTTP-only cookies so API routes work
-        if (session.provider_token) {
-          await fetch('/api/auth/store-google-token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              access_token: session.provider_token,
-              refresh_token: session.provider_refresh_token ?? '',
-              email: session.user.email ?? '',
-              name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? '',
-            }),
-          })
-        }
+        // Sync session to server-side cookies so the middleware can read it
+        await fetch('/api/auth/set-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            google_token: session.provider_token ?? null,
+            google_refresh: session.provider_refresh_token ?? null,
+            email: session.user.email ?? '',
+            name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? '',
+          }),
+        })
         window.location.href = '/'
       }
     })
@@ -80,7 +81,8 @@ export default function LoginPage() {
         <p className="text-slate-500 text-sm mb-8">Sign in to access your dashboard</p>
 
         {loading && (
-          <div className="mb-6 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-700">
+          <div className="mb-6 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-700 flex items-center justify-center gap-2">
+            <div className="w-4 h-4 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
             Signing you in…
           </div>
         )}
@@ -91,23 +93,20 @@ export default function LoginPage() {
           </div>
         )}
 
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-3 px-5 py-3.5 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-2xl text-sm font-semibold text-slate-700 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {loading ? (
-            <div className="w-5 h-5 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin" />
-          ) : (
+        {!loading && (
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 px-5 py-3.5 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-2xl text-sm font-semibold text-slate-700 transition-all shadow-sm"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-          )}
-          {loading ? 'Signing in…' : 'Continue with Google'}
-        </button>
+            Continue with Google
+          </button>
+        )}
 
         <p className="text-xs text-slate-400 mt-6">
           Your data is stored securely and never shared.

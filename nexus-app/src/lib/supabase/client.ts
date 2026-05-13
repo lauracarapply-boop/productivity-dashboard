@@ -6,7 +6,9 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        flowType: 'implicit',
+        // Use localStorage so the PKCE code verifier survives the OAuth redirect
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        persistSession: true,
         detectSessionInUrl: true,
       },
     }
