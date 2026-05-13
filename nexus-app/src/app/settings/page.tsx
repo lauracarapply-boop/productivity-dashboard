@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, createContext, useContext } from 'react'
 import {
   Settings, User, Link2, Bot, Calendar, Bell, Shield, Trash2,
   Check, Download, RefreshCw, AlertCircle, ExternalLink, X,
@@ -8,6 +8,68 @@ import {
 } from 'lucide-react'
 import { mockUser } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
+
+// ── Integration DB sync ────────────────────────────────────────
+// Keys stored: canvas_url, canvas_token, notion_token, slack_token, ical_url, handshake_url, gradescope_url
+
+const INTEGRATION_KEYS = ['canvas_url','canvas_token','notion_token','slack_token','ical_url','handshake_url','gradescope_url'] as const
+type IntegrationKey = typeof INTEGRATION_KEYS[number]
+
+const IntegrationsCtx = createContext<{
+  get: (k: IntegrationKey) => string
+  save: (k: IntegrationKey, v: string) => Promise<void>
+  remove: (k: IntegrationKey) => Promise<void>
+}>({ get: () => '', save: async () => {}, remove: async () => {} })
+
+function IntegrationsProvider({ children }: { children: React.ReactNode }) {
+  const [data, setData] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    // Seed from localStorage immediately
+    const local: Record<string, string> = {}
+    INTEGRATION_KEYS.forEach(k => { local[k] = localStorage.getItem(k) ?? '' })
+    setData(local)
+
+    // Then fetch from DB and override
+    fetch('/api/integrations').then(r => r.json()).then(db => {
+      if (!db || db.error) return
+      const merged: Record<string, string> = { ...local }
+      INTEGRATION_KEYS.forEach(k => {
+        if (db[k]) {
+          merged[k] = db[k]
+          localStorage.setItem(k, db[k]) // keep localStorage in sync
+        }
+      })
+      setData(merged)
+    }).catch(() => {})
+  }, [])
+
+  function get(k: IntegrationKey) { return data[k] ?? '' }
+
+  async function save(k: IntegrationKey, v: string) {
+    localStorage.setItem(k, v)
+    setData(d => ({ ...d, [k]: v }))
+    await fetch('/api/integrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [k]: v }),
+    }).catch(() => {})
+  }
+
+  async function remove(k: IntegrationKey) {
+    localStorage.removeItem(k)
+    setData(d => ({ ...d, [k]: '' }))
+    await fetch('/api/integrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [k]: null }),
+    }).catch(() => {})
+  }
+
+  return <IntegrationsCtx.Provider value={{ get, save, remove }}>{children}</IntegrationsCtx.Provider>
+}
+
+function useIntegrations() { return useContext(IntegrationsCtx) }
 
 const NAV_ITEMS = [
   { id: 'account',       label: 'Account',         icon: User },
@@ -278,6 +340,7 @@ function MicrosoftIntegration() {
 // ── Canvas LMS ─────────────────────────────────────────────────
 
 function CanvasIntegration() {
+  const db = useIntegrations()
   const [canvasUrl, setCanvasUrl] = useState('')
   const [canvasToken, setCanvasToken] = useState('')
   const [testing, setTesting] = useState(false)
@@ -286,11 +349,11 @@ function CanvasIntegration() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    setCanvasUrl(localStorage.getItem('canvas_url') ?? '')
-    setCanvasToken(localStorage.getItem('canvas_token') ?? '')
-  }, [])
+    setCanvasUrl(db.get('canvas_url'))
+    setCanvasToken(db.get('canvas_token'))
+  }, [db])
 
-  const isConnected = !!(localStorage.getItem('canvas_url') && localStorage.getItem('canvas_token'))
+  const isConnected = !!(db.get('canvas_url') && db.get('canvas_token'))
 
   async function testConnection() {
     if (!canvasUrl || !canvasToken) return
@@ -315,14 +378,14 @@ function CanvasIntegration() {
     } finally { setTesting(false) }
   }
 
-  function save() {
-    localStorage.setItem('canvas_url', canvasUrl)
-    localStorage.setItem('canvas_token', canvasToken)
+  async function save() {
+    await db.save('canvas_url', canvasUrl)
+    await db.save('canvas_token', canvasToken)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  function disconnect() {
-    localStorage.removeItem('canvas_url'); localStorage.removeItem('canvas_token')
+  async function disconnect() {
+    await db.remove('canvas_url'); await db.remove('canvas_token')
     setCanvasUrl(''); setCanvasToken(''); setTestResult(null)
   }
 
@@ -366,15 +429,16 @@ function CanvasIntegration() {
 // ── Notion ─────────────────────────────────────────────────────
 
 function NotionIntegration() {
+  const db = useIntegrations()
   const [token, setToken] = useState('')
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
   const [testMessage, setTestMessage] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setToken(localStorage.getItem('notion_token') ?? '') }, [])
+  useEffect(() => { setToken(db.get('notion_token')) }, [db])
 
-  const isConnected = !!localStorage.getItem('notion_token')
+  const isConnected = !!db.get('notion_token')
 
   async function testConnection() {
     if (!token) return
@@ -397,13 +461,13 @@ function NotionIntegration() {
     } finally { setTesting(false) }
   }
 
-  function save() {
-    localStorage.setItem('notion_token', token)
+  async function save() {
+    await db.save('notion_token', token)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  function disconnect() {
-    localStorage.removeItem('notion_token'); setToken(''); setTestResult(null)
+  async function disconnect() {
+    await db.remove('notion_token'); setToken(''); setTestResult(null)
   }
 
   return (
@@ -454,15 +518,16 @@ function NotionIntegration() {
 // ── Slack ──────────────────────────────────────────────────────
 
 function SlackIntegration() {
+  const db = useIntegrations()
   const [token, setToken] = useState('')
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
   const [testMessage, setTestMessage] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setToken(localStorage.getItem('slack_token') ?? '') }, [])
+  useEffect(() => { setToken(db.get('slack_token')) }, [db])
 
-  const isConnected = !!localStorage.getItem('slack_token')
+  const isConnected = !!db.get('slack_token')
 
   async function testConnection() {
     if (!token) return
@@ -486,13 +551,13 @@ function SlackIntegration() {
     } finally { setTesting(false) }
   }
 
-  function save() {
-    localStorage.setItem('slack_token', token)
+  async function save() {
+    await db.save('slack_token', token)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  function disconnect() {
-    localStorage.removeItem('slack_token'); setToken(''); setTestResult(null)
+  async function disconnect() {
+    await db.remove('slack_token'); setToken(''); setTestResult(null)
   }
 
   return (
@@ -545,14 +610,15 @@ function HandshakeIntegration() {
   const [customUrl, setCustomUrl] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setCustomUrl(localStorage.getItem('handshake_url') ?? '') }, [])
+  const db = useIntegrations()
+  useEffect(() => { setCustomUrl(db.get('handshake_url')) }, [db])
 
-  function save() {
-    localStorage.setItem('handshake_url', customUrl || 'https://joinhandshake.com/')
+  async function save() {
+    await db.save('handshake_url', customUrl || 'https://joinhandshake.com/')
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  const handshakeUrl = customUrl || localStorage.getItem('handshake_url') || 'https://joinhandshake.com/'
+  const handshakeUrl = customUrl || db.get('handshake_url') || 'https://joinhandshake.com/'
 
   return (
     <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
@@ -591,14 +657,15 @@ function GradescopeIntegration() {
   const [customUrl, setCustomUrl] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setCustomUrl(localStorage.getItem('gradescope_url') ?? '') }, [])
+  const db = useIntegrations()
+  useEffect(() => { setCustomUrl(db.get('gradescope_url')) }, [db])
 
-  function save() {
-    localStorage.setItem('gradescope_url', customUrl || 'https://www.gradescope.com/')
+  async function save() {
+    await db.save('gradescope_url', customUrl || 'https://www.gradescope.com/')
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  const gradescopeUrl = customUrl || localStorage.getItem('gradescope_url') || 'https://www.gradescope.com/'
+  const gradescopeUrl = customUrl || db.get('gradescope_url') || 'https://www.gradescope.com/'
 
   return (
     <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
@@ -636,18 +703,19 @@ function ICalIntegration() {
   const [icalUrl, setIcalUrl] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setIcalUrl(localStorage.getItem('ical_url') ?? '') }, [])
+  const db = useIntegrations()
+  useEffect(() => { setIcalUrl(db.get('ical_url')) }, [db])
 
-  function save() {
-    localStorage.setItem('ical_url', icalUrl)
+  async function save() {
+    await db.save('ical_url', icalUrl)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
-  function disconnect() {
-    localStorage.removeItem('ical_url'); setIcalUrl('')
+  async function disconnect() {
+    await db.remove('ical_url'); setIcalUrl('')
   }
 
-  const isConnected = !!localStorage.getItem('ical_url')
+  const isConnected = !!db.get('ical_url')
 
   return (
     <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
@@ -680,7 +748,7 @@ function ICalIntegration() {
 
 // ── Main Settings Page ─────────────────────────────────────────
 
-export default function SettingsPage() {
+function SettingsPageInner() {
   const [activeSection, setActiveSection] = useState<SectionId>('account')
   const [name, setName] = useState(mockUser.name)
   const [email, setEmail] = useState(mockUser.email)
@@ -932,5 +1000,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <IntegrationsProvider>
+      <SettingsPageInner />
+    </IntegrationsProvider>
   )
 }
