@@ -10,39 +10,32 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const code = params.get('code')
+    if (params.get('error')) setError('Sign-in failed. Please try again.')
 
-    // Supabase redirected here with a code — exchange it client-side
-    // (PKCE verifier is in the browser's cookie storage from signInWithOAuth)
-    if (code) {
-      setLoading(true)
-      void (async () => {
-        const supabase = createClient()
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError) {
-          setError('Sign-in failed: ' + exchangeError.message)
-          setLoading(false)
-          return
-        }
-        // Store Google provider token server-side so API routes can use it
-        if (data.session?.provider_token) {
+    // With implicit flow, Supabase puts tokens in the URL hash after OAuth.
+    // onAuthStateChange fires automatically when it detects them.
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setLoading(true)
+        // Store Google provider tokens in HTTP-only cookies so API routes work
+        if (session.provider_token) {
           await fetch('/api/auth/store-google-token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              access_token: data.session.provider_token,
-              refresh_token: data.session.provider_refresh_token ?? '',
-              email: data.session.user.email ?? '',
-              name: data.session.user.user_metadata?.full_name ?? '',
+              access_token: session.provider_token,
+              refresh_token: session.provider_refresh_token ?? '',
+              email: session.user.email ?? '',
+              name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? '',
             }),
           })
         }
         window.location.href = '/'
-      })()
-      return
-    }
+      }
+    })
 
-    if (params.get('error')) setError('Sign-in failed. Please try again.')
+    return () => subscription.unsubscribe()
   }, [])
 
   async function handleGoogleLogin() {
@@ -52,7 +45,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: window.location.origin + '/login',
         scopes: [
           'https://www.googleapis.com/auth/calendar.readonly',
           'https://www.googleapis.com/auth/gmail.readonly',
@@ -76,7 +69,6 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-xl border border-black/[0.06] p-10 w-full max-w-sm text-center">
 
-        {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
           <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-md">
             <Zap size={20} className="text-white fill-white" />
@@ -86,6 +78,12 @@ export default function LoginPage() {
 
         <h1 className="text-2xl font-bold text-slate-900 mb-1">Welcome back</h1>
         <p className="text-slate-500 text-sm mb-8">Sign in to access your dashboard</p>
+
+        {loading && (
+          <div className="mb-6 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm text-indigo-700">
+            Signing you in…
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
