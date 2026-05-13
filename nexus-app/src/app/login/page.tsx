@@ -12,10 +12,33 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     const code = params.get('code')
 
-    // Supabase redirected here instead of /api/auth/callback — forward the code
+    // Supabase redirected here with a code — exchange it client-side
+    // (PKCE verifier is in the browser's cookie storage from signInWithOAuth)
     if (code) {
       setLoading(true)
-      window.location.href = `/api/auth/callback?code=${encodeURIComponent(code)}`
+      void (async () => {
+        const supabase = createClient()
+        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (exchangeError) {
+          setError('Sign-in failed: ' + exchangeError.message)
+          setLoading(false)
+          return
+        }
+        // Store Google provider token server-side so API routes can use it
+        if (data.session?.provider_token) {
+          await fetch('/api/auth/store-google-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              access_token: data.session.provider_token,
+              refresh_token: data.session.provider_refresh_token ?? '',
+              email: data.session.user.email ?? '',
+              name: data.session.user.user_metadata?.full_name ?? '',
+            }),
+          })
+        }
+        window.location.href = '/'
+      })()
       return
     }
 
