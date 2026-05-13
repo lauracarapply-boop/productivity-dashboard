@@ -10,6 +10,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+
+    // Supabase redirected here instead of /api/auth/callback — forward the code
+    if (code) {
+      setLoading(true)
+      window.location.href = `/api/auth/callback?code=${encodeURIComponent(code)}`
+      return
+    }
+
     if (params.get('error')) setError('Sign-in failed. Please try again.')
   }, [])
 
