@@ -6,40 +6,43 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
 
+  // No code = Supabase never reached this callback (redirect URL not whitelisted)
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=1`)
+    const error = searchParams.get('error') ?? 'no_code'
+    return NextResponse.redirect(`${origin}/login?error=${error}`)
   }
 
-  // On Vercel, x-forwarded-host is the real public hostname (stable across deployments)
   const forwardedHost = request.headers.get('x-forwarded-host')
   const redirectBase = forwardedHost ? `https://${forwardedHost}` : origin
 
   const response = NextResponse.redirect(`${redirectBase}${next}`)
 
-  // Create Supabase client tied directly to this request/response
-  // so session cookies are written onto the redirect response itself
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() { return request.cookies.getAll() },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options)
+        )
       },
-    }
-  )
+    },
+  })
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-  if (error || !data.session) {
-    return NextResponse.redirect(`${redirectBase}/login?error=1`)
+  // Redirect to login with the exact error so we can diagnose
+  if (error) {
+    return NextResponse.redirect(`${redirectBase}/login?error=${encodeURIComponent(error.message)}`)
   }
 
-  // Store Google provider tokens so Calendar/Gmail/Drive API routes work
+  if (!data.session) {
+    return NextResponse.redirect(`${redirectBase}/login?error=no_session`)
+  }
+
+  // Store Google provider tokens so Calendar/Gmail/Drive routes work
   const { session } = data
   const expires7d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   const expires1y = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
