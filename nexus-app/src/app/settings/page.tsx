@@ -6,8 +6,8 @@ import {
   Check, Download, RefreshCw, AlertCircle, ExternalLink, X,
   Loader2, CheckCircle, Mail, CalendarDays, HardDrive,
 } from 'lucide-react'
-import { mockUser } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Integration DB sync ────────────────────────────────────────
 // Keys stored: canvas_url, canvas_token, notion_token, slack_token, ical_url, handshake_url, gradescope_url
@@ -205,7 +205,7 @@ function GoogleIntegration() {
         {loading ? <Loader2 size={16} className="animate-spin text-slate-400 flex-shrink-0" />
           : status?.connected ? <DisconnectButton onClick={disconnect} loading={disconnecting} />
           : (
-            <a href="/api/auth/google"
+            <a href="/login"
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg bg-[#4285F4] hover:bg-[#3367D6] transition-all shadow-sm flex-shrink-0">
               Sign in with Google
             </a>
@@ -750,10 +750,19 @@ function ICalIntegration() {
 
 function SettingsPageInner() {
   const [activeSection, setActiveSection] = useState<SectionId>('account')
-  const [name, setName] = useState(mockUser.name)
-  const [email, setEmail] = useState(mockUser.email)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [university, setUniversity] = useState('')
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setName(data.user.user_metadata?.full_name ?? data.user.user_metadata?.name ?? '')
+        setEmail(data.user.email ?? '')
+      }
+    })
+  }, [])
 
   const [aiPrefs, setAiPrefs] = useState({
     askBeforeCalendar: true, askBeforeTask: true,
@@ -981,6 +990,12 @@ function SettingsPageInner() {
                   <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-xl text-sm transition-all">
                     <Download size={14} /> Export my data
                   </button>
+                  <button
+                    onClick={async () => { await createClient().auth.signOut(); window.location.href = '/login' }}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-sm transition-all">
+                    Sign out
+                  </button>
+
                   {!showDeleteConfirm ? (
                     <button onClick={() => setShowDeleteConfirm(true)}
                       className="flex items-center gap-2 px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-sm transition-all">
