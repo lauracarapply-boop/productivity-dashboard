@@ -17,7 +17,7 @@ export interface Workspace {
   user_id: string
   name: string
   description?: string
-  color: string       // hex color string, e.g. "#4F46E5"
+  color: string       // hex color string, e.g. "#3F5F5A"
   icon: string        // Lucide icon name as string, e.g. "BookOpen"
   type: string        // "academic" | "personal" | "project" | "language" | etc.
   created_at: string

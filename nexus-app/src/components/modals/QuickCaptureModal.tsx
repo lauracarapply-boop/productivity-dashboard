@@ -190,7 +190,7 @@ export default function QuickCaptureModal({ onClose }: Props) {
               onClick={handleExtract}
               disabled={!text.trim() || loading}
               className="w-full flex items-center justify-center gap-2 py-2.5 text-white font-semibold text-sm rounded-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md"
-              style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+              style={{ background: 'linear-gradient(135deg, #3F5F5A, #274743)' }}
             >
               {loading ? (
                 <>

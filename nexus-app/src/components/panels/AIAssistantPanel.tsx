@@ -215,7 +215,7 @@ export default function AIAssistantPanel() {
               }`}
               style={
                 msg.role === 'user'
-                  ? { background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }
+                  ? { background: 'linear-gradient(135deg, #3F5F5A, #274743)' }
                   : undefined
               }
             >

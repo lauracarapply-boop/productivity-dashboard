@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+/* ── Brand color overrides (teal-green palette) ─────────────── */
+@theme {
+  --color-indigo-50:  #EAF4F2;
+  --color-indigo-100: #C7EAE3;
+  --color-indigo-200: #ABCEC7;
+  --color-indigo-300: #8BBDB6;
+  --color-indigo-400: #6AA8A0;
+  --color-indigo-500: #44645F;
+  --color-indigo-600: #3F5F5A;
+  --color-indigo-700: #274743;
+  --color-indigo-800: #1A3530;
+  --color-indigo-900: #0E2220;
+
+  --color-violet-50:  #EAF4F2;
+  --color-violet-100: #C7EAE3;
+  --color-violet-200: #ABCEC7;
+  --color-violet-300: #8BBDB6;
+  --color-violet-400: #6AA8A0;
+  --color-violet-500: #44645F;
+  --color-violet-600: #3F5F5A;
+  --color-violet-700: #274743;
+}
+
 /* ── Design Tokens ──────────────────────────────────────────── */
 :root {
   /* Backgrounds — warm off-white, not sterile white */
@@ -15,16 +38,16 @@
   --border-subtle:  rgba(0, 0, 0, 0.04);
 
   /* Text */
-  --text-primary:   #1A1A2E;
+  --text-primary:   #1A1C1B;
   --text-secondary: #64748B;
   --text-muted:     #94A3B8;
   --text-disabled:  #CBD5E1;
 
-  /* Accent — indigo → violet gradient */
-  --accent-primary:       #4F46E5;
-  --accent-primary-hover: #4338CA;
-  --accent-secondary:     #7C3AED;
-  --accent-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  /* Accent — teal-green palette */
+  --accent-primary:       #3F5F5A;
+  --accent-primary-hover: #274743;
+  --accent-secondary:     #274743;
+  --accent-gradient: linear-gradient(135deg, #3F5F5A 0%, #274743 100%);
 
   /* Semantic colors */
   --color-success:  #059669;
@@ -77,7 +100,7 @@ body {
 
 /* ── Selection ──────────────────────────────────────────────── */
 ::selection {
-  background-color: rgba(79, 70, 229, 0.15);
+  background-color: rgba(63, 95, 90, 0.15);
   color: #1A1A2E;
 }
 
@@ -113,7 +136,7 @@ body {
   100% { background-position:  200% 0; }
 }
 @keyframes pulseRing {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.3); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(63, 95, 90, 0.3); }
   50%       { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
 }
 @keyframes checkmark {
@@ -149,7 +172,7 @@ body {
 }
 .card-hover:hover {
   box-shadow: var(--shadow-md);
-  border-color: rgba(79, 70, 229, 0.2);
+  border-color: rgba(63, 95, 90, 0.2);
   transform: translateY(-1px);
 }
 
@@ -176,9 +199,9 @@ body {
   text-transform: uppercase;
   padding: 2px 7px;
   border-radius: 99px;
-  background: linear-gradient(135deg, #EEF2FF, #EDE9FE);
-  color: #4F46E5;
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  background: linear-gradient(135deg, #EAF4F2, #EDE9FE);
+  color: #3F5F5A;
+  border: 1px solid rgba(63, 95, 90, 0.2);
 }
 
 /* ── Progress bar ───────────────────────────────────────────── */
@@ -195,9 +218,9 @@ body {
   transition: all 0.15s ease;
 }
 .nav-item-active {
-  background-color: rgba(79, 70, 229, 0.08);
-  color: #4F46E5;
-  border-left-color: #4F46E5;
+  background-color: rgba(63, 95, 90, 0.08);
+  color: #3F5F5A;
+  border-left-color: #3F5F5A;
 }
 
 /* ── Glass effect ───────────────────────────────────────────── */
@@ -222,7 +245,7 @@ body {
 }
 .input-base:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 0 0 3px rgba(63, 95, 90, 0.1);
 }
 .input-base::placeholder { color: var(--text-muted); }
 
@@ -309,9 +332,9 @@ body {
 .task-done { opacity: 0.5; text-decoration: line-through; }
 
 /* ── Calendar event blocks ──────────────────────────────────── */
-.event-class       { background: #EEF2FF; border-color: #4F46E5; color: #3730A3; }
+.event-class       { background: #EAF4F2; border-color: #3F5F5A; color: #1A3530; }
 .event-study       { background: #F0FDF4; border-color: #059669; color: #065F46; }
-.event-meeting     { background: #F5F3FF; border-color: #7C3AED; color: #5B21B6; }
+.event-meeting     { background: #EAF4F2; border-color: #274743; color: #274743; }
 .event-deadline    { background: #FEF2F2; border-color: #DC2626; color: #991B1B; }
 .event-personal    { background: #FFFBEB; border-color: #D97706; color: #92400E; }
 .event-appointment { background: #F0F9FF; border-color: #0284C7; color: #0C4A6E; }

@@ -61,7 +61,7 @@ export default function TopBar() {
         {/* Capture button */}
         <button onClick={() => setQuickCaptureOpen(true)}
           className="flex items-center gap-2 px-3.5 py-2 text-white text-sm font-semibold rounded-xl transition-all duration-200 hover:shadow-md flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+          style={{ background: 'linear-gradient(135deg, #3F5F5A, #274743)' }}>
           <Zap size={14} />
           <span className="hidden sm:inline">Capture</span>
         </button>
@@ -126,7 +126,7 @@ export default function TopBar() {
         {/* User */}
         <div className="flex items-center gap-2 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white ring-2 ring-white shadow-sm"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+            style={{ background: 'linear-gradient(135deg, #3F5F5A, #274743)' }}>
             {mockUser.name[0]}
           </div>
           <span className="text-sm font-medium text-slate-700 hidden sm:block">{mockUser.name}</span>

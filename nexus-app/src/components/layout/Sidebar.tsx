@@ -7,6 +7,7 @@ import {
   BookOpen, FileText, Brain, HardDrive, GraduationCap,
   Layers, FolderKanban, Globe, Sparkles, TrendingUp,
   Target, CalendarDays, BarChart2, Settings, Mail,
+  Heart, DollarSign,
   ChevronLeft, ChevronRight, type LucideIcon,
 } from 'lucide-react'
 import { useApp } from '@/lib/store'
@@ -59,6 +60,13 @@ function buildNavGroups(pendingCount: number): NavGroup[] {
       ],
     },
     {
+      label: 'Personal',
+      items: [
+        { label: 'Health',    href: '/health',    icon: Heart },
+        { label: 'Finances',  href: '/finances',  icon: DollarSign },
+      ],
+    },
+    {
       label: 'Planning',
       items: [
         { label: 'Focus Mode',     href: '/focus',     icon: Target },
@@ -92,7 +100,7 @@ export default function Sidebar() {
         {!sidebarCollapsed && (
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+              style={{ background: 'linear-gradient(135deg, #3F5F5A, #274743)' }}>
               <span className="text-white text-xs font-bold tracking-tight">N</span>
             </div>
             <span className="text-[17px] font-bold tracking-tight leading-none gradient-text">
@@ -102,7 +110,7 @@ export default function Sidebar() {
         )}
         {sidebarCollapsed && (
           <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+            style={{ background: 'linear-gradient(135deg, #3F5F5A, #274743)' }}>
             <span className="text-white text-xs font-bold">N</span>
           </div>
         )}
@@ -232,7 +240,7 @@ export default function Sidebar() {
             'shadow-sm hover:shadow-md active:scale-[0.98]',
             sidebarCollapsed && 'justify-center px-2',
           )}
-          style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+          style={{ background: 'linear-gradient(135deg, #3F5F5A, #274743)' }}
         >
           <Zap size={14} className="flex-shrink-0" />
           {!sidebarCollapsed && <span>Quick Capture</span>}
@@ -244,7 +252,7 @@ export default function Sidebar() {
           sidebarCollapsed && 'justify-center',
         )}>
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ring-2 ring-indigo-100"
-            style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+            style={{ background: 'linear-gradient(135deg, #3F5F5A, #274743)' }}>
             {mockUser.name[0]}
           </div>
           {!sidebarCollapsed && (

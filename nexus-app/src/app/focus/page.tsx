@@ -145,7 +145,7 @@ export default function FocusPage() {
             <circle cx="100" cy="100" r={RING_RADIUS} fill="none" stroke="#e2e8f0" strokeWidth="8" />
             {/* Progress */}
             <circle cx="100" cy="100" r={RING_RADIUS} fill="none"
-              stroke="#4f46e5" strokeWidth="8" strokeLinecap="round"
+              stroke="#3F5F5A" strokeWidth="8" strokeLinecap="round"
               strokeDasharray={RING_CIRCUMFERENCE}
               strokeDashoffset={strokeDash}
               className="transition-all duration-1000" />

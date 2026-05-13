@@ -73,18 +73,18 @@ function getNextClass(schedule: { day: string; start: string; end: string; locat
   return `Next class: ${nextDay}, ${nextDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
 }
 
-const COURSE_COLORS = ['#4F46E5', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0284C7', '#DB2777', '#16A34A']
+const COURSE_COLORS = ['#3F5F5A', '#274743', '#059669', '#D97706', '#DC2626', '#0284C7', '#DB2777', '#16A34A']
 
 export default function CoursesPage() {
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ name: '', code: '', professor: '', color: '#4F46E5', semester: 'Spring 2026' })
+  const [form, setForm] = useState({ name: '', code: '', professor: '', color: '#3F5F5A', semester: 'Spring 2026' })
   const [added, setAdded] = useState(false)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setShowModal(false)
     setAdded(true)
-    setForm({ name: '', code: '', professor: '', color: '#4F46E5', semester: 'Spring 2026' })
+    setForm({ name: '', code: '', professor: '', color: '#3F5F5A', semester: 'Spring 2026' })
     setTimeout(() => setAdded(false), 3000)
   }
 
