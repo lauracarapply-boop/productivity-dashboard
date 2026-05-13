@@ -21,7 +21,9 @@
       "Bash(powershell -Command ' *)",
       "PowerShell(taskkill /PID 560 /F)",
       "Bash(npx plugins *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\laoli\\OneDrive\\Área de Trabalho\\productivity dashboard\\nexus-app\\src"

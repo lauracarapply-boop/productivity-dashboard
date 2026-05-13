@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd nexus-app && npm run build",
-  "installCommand": "cd nexus-app && npm install",
-  "outputDirectory": "nexus-app/.next",
-  "framework": "nextjs"
-}
