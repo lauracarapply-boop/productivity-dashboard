@@ -636,18 +636,18 @@ function ICalIntegration() {
   const [icalUrl, setIcalUrl] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setIcalUrl(localStorage.getItem('outlook_ical_url') ?? '') }, [])
+  useEffect(() => { setIcalUrl(localStorage.getItem('ical_url') ?? '') }, [])
 
   function save() {
-    localStorage.setItem('outlook_ical_url', icalUrl)
+    localStorage.setItem('ical_url', icalUrl)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
   function disconnect() {
-    localStorage.removeItem('outlook_ical_url'); setIcalUrl('')
+    localStorage.removeItem('ical_url'); setIcalUrl('')
   }
 
-  const isConnected = !!localStorage.getItem('outlook_ical_url')
+  const isConnected = !!localStorage.getItem('ical_url')
 
   return (
     <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
