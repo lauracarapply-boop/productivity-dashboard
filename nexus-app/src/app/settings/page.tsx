@@ -4,18 +4,18 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Settings, User, Link2, Bot, Calendar, Bell, Shield, Trash2,
   Check, Download, RefreshCw, AlertCircle, ExternalLink, X,
-  Loader2, CheckCircle, GraduationCap, Mail, CalendarDays,
+  Loader2, CheckCircle, Mail, CalendarDays, HardDrive,
 } from 'lucide-react'
 import { mockUser } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { id: 'account',       label: 'Account',            icon: User },
-  { id: 'integrations',  label: 'Integrations',        icon: Link2 },
-  { id: 'ai',            label: 'AI Preferences',      icon: Bot },
-  { id: 'calendar',      label: 'Calendar Rules',      icon: Calendar },
-  { id: 'notifications', label: 'Notifications',       icon: Bell },
-  { id: 'privacy',       label: 'Privacy & Data',      icon: Shield },
+  { id: 'account',       label: 'Account',         icon: User },
+  { id: 'integrations',  label: 'Integrations',     icon: Link2 },
+  { id: 'ai',            label: 'AI Preferences',   icon: Bot },
+  { id: 'calendar',      label: 'Calendar Rules',   icon: Calendar },
+  { id: 'notifications', label: 'Notifications',    icon: Bell },
+  { id: 'privacy',       label: 'Privacy & Data',   icon: Shield },
 ] as const
 
 type SectionId = typeof NAV_ITEMS[number]['id']
@@ -43,40 +43,84 @@ function SettingRow({ label, desc, children }: { label: string; desc?: string; c
   )
 }
 
-// ── Google Integration ──────────────────────────────────────────
+// ── Shared helpers ──────────────────────────────────────────────
 
-interface GoogleStatus {
-  connected: boolean
-  email: string | null
-  name: string | null
+function ConnectedBadge() {
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full flex-shrink-0">
+      <CheckCircle size={9} /> Connected
+    </span>
+  )
 }
 
+function DisconnectButton({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
+  return (
+    <button onClick={onClick} disabled={loading}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-all flex-shrink-0">
+      {loading ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+      Disconnect
+    </button>
+  )
+}
+
+function TokenInput({
+  label, value, onChange, placeholder, type = 'password', helpUrl, helpText,
+}: {
+  label: string; value: string; onChange: (v: string) => void
+  placeholder: string; type?: string; helpUrl?: string; helpText?: string
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-1.5">
+        <label className="text-xs font-medium text-slate-600">{label}</label>
+        {helpUrl && (
+          <a href={helpUrl} target="_blank" rel="noopener"
+            className="text-[11px] text-indigo-500 hover:underline flex items-center gap-0.5">
+            How to get this <ExternalLink size={9} />
+          </a>
+        )}
+      </div>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        className="w-full px-3 py-2.5 border border-black/[0.12] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono text-slate-700" />
+      {helpText && <p className="text-[11px] text-slate-400 mt-1">{helpText}</p>}
+    </div>
+  )
+}
+
+function TestResult({ result, message }: { result: 'success' | 'error' | null; message: string }) {
+  if (!result) return null
+  return (
+    <div className={cn('flex items-center gap-2 p-3 rounded-xl text-xs',
+      result === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-red-50 border border-red-200 text-red-600')}>
+      {result === 'success' ? <CheckCircle size={13} /> : <AlertCircle size={13} />}
+      {message}
+    </div>
+  )
+}
+
+// ── Google (Calendar + Gmail + Drive) ──────────────────────────
+
 function GoogleIntegration() {
-  const [status, setStatus] = useState<GoogleStatus | null>(null)
+  const [status, setStatus] = useState<{ connected: boolean; email: string | null; name: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [disconnecting, setDisconnecting] = useState(false)
-  const [urlParams, setUrlParams] = useState<{ integration: string | null; status: string | null }>({ integration: null, status: null })
+  const [urlStatus, setUrlStatus] = useState<{ integration: string | null; status: string | null }>({ integration: null, status: null })
 
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/google/status')
-      const data = await res.json()
-      setStatus(data)
-    } catch {
-      setStatus({ connected: false, email: null, name: null })
-    } finally {
-      setLoading(false)
-    }
+      setStatus(await res.json())
+    } catch { setStatus({ connected: false, email: null, name: null }) }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
     fetchStatus()
     const sp = new URLSearchParams(window.location.search)
-    setUrlParams({ integration: sp.get('integration'), status: sp.get('status') })
+    setUrlStatus({ integration: sp.get('integration'), status: sp.get('status') })
   }, [fetchStatus])
 
-  const justConnected = urlParams.integration === 'google' && urlParams.status === 'connected'
-  const connectError = urlParams.integration === 'google' && urlParams.status !== 'connected' && urlParams.status !== null
+  const isError = urlStatus.integration === 'google' && urlStatus.status && urlStatus.status !== 'connected'
 
   async function disconnect() {
     setDisconnecting(true)
@@ -85,115 +129,172 @@ function GoogleIntegration() {
     setDisconnecting(false)
   }
 
-  const isConfigured = true // show connect button regardless; API route handles missing env vars
-
   return (
     <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
-      {/* Header */}
       <div className="flex items-center gap-4 p-5 border-b border-slate-100">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-2xl flex-shrink-0">
-          🔵
-        </div>
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-xl flex-shrink-0">🔵</div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-semibold text-slate-800">Google Account</h3>
-            {(loading ? false : status?.connected) && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
-                <CheckCircle size={9} /> Connected
-              </span>
-            )}
+            {!loading && status?.connected && <ConnectedBadge />}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">Google Calendar + Gmail — one sign-in connects both</p>
+          <p className="text-xs text-slate-500 mt-0.5">Google Calendar · Gmail · Google Drive — one sign-in</p>
         </div>
-        <div className="flex-shrink-0">
-          {loading ? (
-            <Loader2 size={16} className="animate-spin text-slate-400" />
-          ) : status?.connected ? (
-            <button onClick={disconnect} disabled={disconnecting}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-all">
-              {disconnecting ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
-              Disconnect
-            </button>
-          ) : (
+        {loading ? <Loader2 size={16} className="animate-spin text-slate-400 flex-shrink-0" />
+          : status?.connected ? <DisconnectButton onClick={disconnect} loading={disconnecting} />
+          : (
             <a href="/api/auth/google"
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg bg-[#4285F4] hover:bg-[#3367D6] transition-all shadow-sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff" opacity=".8"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff" opacity=".8"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#fff" opacity=".8"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff" opacity=".8"/>
-              </svg>
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg bg-[#4285F4] hover:bg-[#3367D6] transition-all shadow-sm flex-shrink-0">
               Sign in with Google
             </a>
           )}
-        </div>
       </div>
 
-      {/* Connected info */}
       {status?.connected && (
-        <div className="px-5 py-4 bg-emerald-50/50 border-b border-emerald-100">
-          <div className="flex items-center gap-2 text-sm text-slate-700">
-            <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
-            <span>Signed in as <strong>{status.email}</strong></span>
-          </div>
-          <div className="flex items-center gap-4 mt-3">
-            <div className="flex items-center gap-2 text-xs text-slate-600 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg">
-              <CalendarDays size={12} className="text-blue-500" />
-              Google Calendar synced
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-600 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg">
-              <Mail size={12} className="text-red-500" />
-              Gmail synced
-            </div>
+        <div className="px-5 py-4 bg-emerald-50/50">
+          <p className="text-xs text-slate-600 mb-2">Signed in as <strong>{status.email}</strong></p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { icon: CalendarDays, label: 'Google Calendar', color: 'text-blue-500' },
+              { icon: Mail, label: 'Gmail', color: 'text-red-500' },
+              { icon: HardDrive, label: 'Google Drive', color: 'text-green-600' },
+            ].map(({ icon: Icon, label, color }) => (
+              <div key={label} className="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg">
+                <Icon size={12} className={color} /> {label}
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Error/success banners */}
-      {justConnected && !status?.connected && (
-        <div className="px-5 py-3 bg-emerald-50 flex items-center gap-2 text-xs text-emerald-700">
-          <CheckCircle size={13} /> Successfully connected to Google!
-        </div>
-      )}
-      {connectError && (
+      {isError && (
         <div className="px-5 py-3 bg-red-50 flex items-center gap-2 text-xs text-red-600">
           <AlertCircle size={13} />
-          Connection failed ({urlParams.status}). Check that GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI are set in Vercel.
+          Connection failed ({urlStatus.status}). Verify GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI in Vercel.
         </div>
       )}
 
-      {/* Setup instructions when not connected */}
       {!loading && !status?.connected && (
-        <div className="p-5">
-          <p className="text-xs font-semibold text-slate-600 mb-3">Setup required — one-time steps:</p>
-          <ol className="space-y-2 text-xs text-slate-500">
-            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">1.</span>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" className="text-indigo-600 hover:underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink size={9} /></a>, create a project, enable Calendar API and Gmail API.</li>
-            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">2.</span>Create OAuth 2.0 credentials (Web application). Add your Vercel URL + <code className="bg-slate-100 px-1 rounded">/api/auth/google/callback</code> as Authorized redirect URI.</li>
-            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">3.</span>In Vercel → Settings → Environment Variables, add <code className="bg-slate-100 px-1 rounded">GOOGLE_CLIENT_ID</code>, <code className="bg-slate-100 px-1 rounded">GOOGLE_CLIENT_SECRET</code>, and <code className="bg-slate-100 px-1 rounded">GOOGLE_REDIRECT_URI</code>.</li>
-            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">4.</span>Redeploy and click "Sign in with Google" above.</li>
+        <details className="p-5">
+          <summary className="text-xs font-semibold text-slate-600 cursor-pointer hover:text-slate-800">Setup instructions (one-time)</summary>
+          <ol className="mt-3 space-y-2 text-xs text-slate-500">
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">1.</span><span>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" className="text-indigo-600 hover:underline">console.cloud.google.com</a> → create a project → enable <strong>Calendar API</strong>, <strong>Gmail API</strong>, and <strong>Drive API</strong>.</span></li>
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">2.</span><span>Create OAuth credentials (Web app). Set redirect URI to <code className="bg-slate-100 px-1 rounded">https://your-app.vercel.app/api/auth/google/callback</code></span></li>
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">3.</span><span>Add <code className="bg-slate-100 px-1 rounded">GOOGLE_CLIENT_ID</code>, <code className="bg-slate-100 px-1 rounded">GOOGLE_CLIENT_SECRET</code>, <code className="bg-slate-100 px-1 rounded">GOOGLE_REDIRECT_URI</code> to Vercel environment variables.</span></li>
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">4.</span><span>Redeploy on Vercel, then click <strong>Sign in with Google</strong>.</span></li>
           </ol>
-        </div>
+        </details>
       )}
     </div>
   )
 }
 
-// ── Canvas Integration ──────────────────────────────────────────
+// ── Microsoft 365 (Outlook + Teams + OneDrive) ─────────────────
+
+function MicrosoftIntegration() {
+  const [status, setStatus] = useState<{ connected: boolean; email: string | null; name: string | null } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [urlStatus, setUrlStatus] = useState<{ integration: string | null; status: string | null }>({ integration: null, status: null })
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/microsoft/status')
+      setStatus(await res.json())
+    } catch { setStatus({ connected: false, email: null, name: null }) }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => {
+    fetchStatus()
+    const sp = new URLSearchParams(window.location.search)
+    setUrlStatus({ integration: sp.get('integration'), status: sp.get('status') })
+  }, [fetchStatus])
+
+  const isError = urlStatus.integration === 'microsoft' && urlStatus.status && urlStatus.status !== 'connected'
+
+  async function disconnect() {
+    setDisconnecting(true)
+    await fetch('/api/auth/microsoft/disconnect', { method: 'POST' })
+    setStatus({ connected: false, email: null, name: null })
+    setDisconnecting(false)
+  }
+
+  return (
+    <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-4 p-5 border-b border-slate-100">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl flex-shrink-0">🪟</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-semibold text-slate-800">Microsoft 365</h3>
+            {!loading && status?.connected && <ConnectedBadge />}
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">Outlook Calendar · Microsoft Teams · OneDrive</p>
+        </div>
+        {loading ? <Loader2 size={16} className="animate-spin text-slate-400 flex-shrink-0" />
+          : status?.connected ? <DisconnectButton onClick={disconnect} loading={disconnecting} />
+          : (
+            <a href="/api/auth/microsoft"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg bg-[#0078D4] hover:bg-[#106EBE] transition-all shadow-sm flex-shrink-0">
+              Sign in with Microsoft
+            </a>
+          )}
+      </div>
+
+      {status?.connected && (
+        <div className="px-5 py-4 bg-blue-50/30">
+          <p className="text-xs text-slate-600 mb-2">Signed in as <strong>{status.email}</strong></p>
+          <div className="flex flex-wrap gap-2">
+            {['Outlook Calendar', 'Microsoft Teams', 'OneDrive'].map(label => (
+              <div key={label} className="text-xs text-slate-600 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg">{label}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isError && (
+        <div className="px-5 py-3 bg-red-50 flex items-center gap-2 text-xs text-red-600">
+          <AlertCircle size={13} />
+          Connection failed ({urlStatus.status}). Verify MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_REDIRECT_URI in Vercel.
+        </div>
+      )}
+
+      {!loading && !status?.connected && (
+        <details className="p-5">
+          <summary className="text-xs font-semibold text-slate-600 cursor-pointer hover:text-slate-800">Setup instructions (one-time)</summary>
+          <ol className="mt-3 space-y-2 text-xs text-slate-500">
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">1.</span><span>Go to <a href="https://portal.azure.com" target="_blank" rel="noopener" className="text-indigo-600 hover:underline">portal.azure.com</a> → Azure Active Directory → App registrations → New registration.</span></li>
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">2.</span><span>Set redirect URI to <code className="bg-slate-100 px-1 rounded">https://your-app.vercel.app/api/auth/microsoft/callback</code> (type: Web).</span></li>
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">3.</span><span>Under <strong>Certificates & secrets</strong> → create a new Client Secret. Copy the value immediately.</span></li>
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">4.</span><span>Add <code className="bg-slate-100 px-1 rounded">MICROSOFT_CLIENT_ID</code> (Application ID), <code className="bg-slate-100 px-1 rounded">MICROSOFT_CLIENT_SECRET</code>, and <code className="bg-slate-100 px-1 rounded">MICROSOFT_REDIRECT_URI</code> to Vercel env vars.</span></li>
+            <li className="flex gap-2"><span className="font-bold text-slate-600 flex-shrink-0">5.</span><span>Redeploy and click <strong>Sign in with Microsoft</strong>.</span></li>
+          </ol>
+        </details>
+      )}
+    </div>
+  )
+}
+
+// ── Canvas LMS ─────────────────────────────────────────────────
 
 function CanvasIntegration() {
-  const [canvasUrl, setCanvasUrl] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('canvas_url') ?? '' : '')
-  const [canvasToken, setCanvasToken] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('canvas_token') ?? '' : '')
+  const [canvasUrl, setCanvasUrl] = useState('')
+  const [canvasToken, setCanvasToken] = useState('')
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
   const [testMessage, setTestMessage] = useState('')
   const [saved, setSaved] = useState(false)
 
-  const isConnected = !!(canvasUrl && canvasToken && testResult === 'success')
+  useEffect(() => {
+    setCanvasUrl(localStorage.getItem('canvas_url') ?? '')
+    setCanvasToken(localStorage.getItem('canvas_token') ?? '')
+  }, [])
+
+  const isConnected = !!(localStorage.getItem('canvas_url') && localStorage.getItem('canvas_token'))
 
   async function testConnection() {
     if (!canvasUrl || !canvasToken) return
-    setTesting(true)
-    setTestResult(null)
+    setTesting(true); setTestResult(null)
     try {
       const url = new URL('/api/canvas', window.location.origin)
       url.searchParams.set('url', canvasUrl)
@@ -210,120 +311,139 @@ function CanvasIntegration() {
         setTestMessage(`Canvas returned ${res.status}. Check your URL and API token.`)
       }
     } catch {
-      setTestResult('error')
-      setTestMessage('Could not reach Canvas. Check the URL.')
-    } finally {
-      setTesting(false)
-    }
+      setTestResult('error'); setTestMessage('Could not reach Canvas. Check the URL.')
+    } finally { setTesting(false) }
   }
 
   function save() {
     localStorage.setItem('canvas_url', canvasUrl)
     localStorage.setItem('canvas_token', canvasToken)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
   function disconnect() {
-    localStorage.removeItem('canvas_url')
-    localStorage.removeItem('canvas_token')
-    setCanvasUrl('')
-    setCanvasToken('')
-    setTestResult(null)
+    localStorage.removeItem('canvas_url'); localStorage.removeItem('canvas_token')
+    setCanvasUrl(''); setCanvasToken(''); setTestResult(null)
   }
 
   return (
     <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
       <div className="flex items-center gap-4 p-5 border-b border-slate-100">
-        <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-2xl flex-shrink-0">
-          🎓
-        </div>
+        <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-xl flex-shrink-0">🎓</div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-semibold text-slate-800">Canvas LMS</h3>
-            {isConnected && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
-                <CheckCircle size={9} /> Connected
-              </span>
-            )}
+            {isConnected && testResult === 'success' && <ConnectedBadge />}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">Courses, assignments, grades, and deadlines</p>
         </div>
-        {isConnected && (
-          <button onClick={disconnect} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-all flex-shrink-0">
-            <X size={11} /> Disconnect
-          </button>
-        )}
+        {isConnected && <DisconnectButton onClick={disconnect} />}
       </div>
-
       <div className="p-5 space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">Canvas Institution URL</label>
-          <input
-            type="url"
-            value={canvasUrl}
-            onChange={e => setCanvasUrl(e.target.value)}
-            placeholder="https://youruniversity.instructure.com"
-            className="w-full px-3 py-2.5 border border-black/[0.12] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono text-slate-700"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">
-            Canvas API Token
-            <a href="#canvas-token-help" className="ml-1.5 text-indigo-500 hover:underline font-normal">How to get this?</a>
-          </label>
-          <input
-            type="password"
-            value={canvasToken}
-            onChange={e => setCanvasToken(e.target.value)}
-            placeholder="Canvas API access token"
-            className="w-full px-3 py-2.5 border border-black/[0.12] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono text-slate-700"
-          />
-        </div>
-
-        {testResult === 'success' && (
-          <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700">
-            <CheckCircle size={13} /> {testMessage}
-          </div>
-        )}
-        {testResult === 'error' && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600">
-            <AlertCircle size={13} /> {testMessage}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={testConnection}
-            disabled={testing || !canvasUrl || !canvasToken}
-            className="flex items-center gap-2 px-4 py-2 border border-black/[0.12] rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all"
-          >
+        <TokenInput label="Canvas Institution URL" value={canvasUrl} onChange={setCanvasUrl}
+          placeholder="https://youruniversity.instructure.com" type="url" />
+        <TokenInput label="Canvas API Token" value={canvasToken} onChange={setCanvasToken}
+          placeholder="Canvas API access token"
+          helpText="Account → Settings → Approved Integrations → New Access Token" />
+        <TestResult result={testResult} message={testMessage} />
+        <div className="flex gap-2">
+          <button onClick={testConnection} disabled={testing || !canvasUrl || !canvasToken}
+            className="flex items-center gap-2 px-4 py-2 border border-black/[0.12] rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all">
             {testing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
             Test Connection
           </button>
-          <button
-            onClick={save}
-            disabled={!canvasUrl || !canvasToken}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
-              saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            )}
-          >
+          <button onClick={save} disabled={!canvasUrl || !canvasToken}
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
+              saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')}>
             {saved ? <><Check size={13} /> Saved!</> : 'Save'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
 
-        <details id="canvas-token-help" className="text-xs text-slate-500">
-          <summary className="cursor-pointer font-medium text-slate-600 hover:text-slate-800 transition-colors">
-            How to get a Canvas API token
-          </summary>
+// ── Notion ─────────────────────────────────────────────────────
+
+function NotionIntegration() {
+  const [token, setToken] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
+  const [testMessage, setTestMessage] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => { setToken(localStorage.getItem('notion_token') ?? '') }, [])
+
+  const isConnected = !!localStorage.getItem('notion_token')
+
+  async function testConnection() {
+    if (!token) return
+    setTesting(true); setTestResult(null)
+    try {
+      const url = new URL('/api/notion', window.location.origin)
+      url.searchParams.set('token', token)
+      url.searchParams.set('endpoint', '/v1/users/me')
+      const res = await fetch(url.toString())
+      if (res.ok) {
+        const data = await res.json()
+        setTestResult('success')
+        setTestMessage(`Connected as ${data.name ?? data.id}!`)
+      } else {
+        setTestResult('error')
+        setTestMessage('Invalid token. Check your Notion integration token.')
+      }
+    } catch {
+      setTestResult('error'); setTestMessage('Could not reach Notion API.')
+    } finally { setTesting(false) }
+  }
+
+  function save() {
+    localStorage.setItem('notion_token', token)
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
+  function disconnect() {
+    localStorage.removeItem('notion_token'); setToken(''); setTestResult(null)
+  }
+
+  return (
+    <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-4 p-5 border-b border-slate-100">
+        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-xl flex-shrink-0">◻️</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-semibold text-slate-800">Notion</h3>
+            {isConnected && testResult === 'success' && <ConnectedBadge />}
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">Pages, databases, notes, and tasks</p>
+        </div>
+        {isConnected && <DisconnectButton onClick={disconnect} />}
+      </div>
+      <div className="p-5 space-y-4">
+        <TokenInput label="Notion API Token" value={token} onChange={setToken}
+          placeholder="secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          helpUrl="https://www.notion.so/my-integrations"
+          helpText="Create an integration at notion.so/my-integrations → copy the Internal Integration Token" />
+        <TestResult result={testResult} message={testMessage} />
+        <div className="flex gap-2">
+          <button onClick={testConnection} disabled={testing || !token}
+            className="flex items-center gap-2 px-4 py-2 border border-black/[0.12] rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all">
+            {testing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            Test Connection
+          </button>
+          <button onClick={save} disabled={!token}
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
+              saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')}>
+            {saved ? <><Check size={13} /> Saved!</> : 'Save'}
+          </button>
+        </div>
+        <details className="text-xs text-slate-500">
+          <summary className="cursor-pointer font-medium text-slate-600 hover:text-slate-800">How to create a Notion integration</summary>
           <ol className="mt-2 space-y-1.5 pl-4">
-            <li>1. Log in to your Canvas account</li>
-            <li>2. Go to <strong>Account → Settings</strong> (top-left menu)</li>
-            <li>3. Scroll to <strong>Approved Integrations</strong></li>
-            <li>4. Click <strong>+ New Access Token</strong></li>
-            <li>5. Enter a purpose (e.g. "Nexus Dashboard") and click Generate</li>
-            <li>6. Copy the token and paste it above</li>
+            <li>1. Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener" className="text-indigo-600 hover:underline">notion.so/my-integrations</a></li>
+            <li>2. Click <strong>New integration</strong> → give it a name → Submit</li>
+            <li>3. Copy the <strong>Internal Integration Token</strong> (starts with <code className="bg-slate-100 px-1 rounded">secret_</code>)</li>
+            <li>4. In Notion, open any page → click <strong>⋯ → Add connections</strong> → select your integration</li>
           </ol>
         </details>
       </div>
@@ -331,78 +451,234 @@ function CanvasIntegration() {
   )
 }
 
-// ── Calendar iCal Integration ───────────────────────────────────
+// ── Slack ──────────────────────────────────────────────────────
 
-function OutlookCalendarIntegration() {
-  const [icalUrl, setIcalUrl] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('outlook_ical_url') ?? '' : '')
+function SlackIntegration() {
+  const [token, setToken] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
+  const [testMessage, setTestMessage] = useState('')
   const [saved, setSaved] = useState(false)
-  const isConnected = !!icalUrl
+
+  useEffect(() => { setToken(localStorage.getItem('slack_token') ?? '') }, [])
+
+  const isConnected = !!localStorage.getItem('slack_token')
+
+  async function testConnection() {
+    if (!token) return
+    setTesting(true); setTestResult(null)
+    try {
+      const url = new URL('/api/slack', window.location.origin)
+      url.searchParams.set('token', token)
+      url.searchParams.set('method', 'auth.test')
+      const res = await fetch(url.toString())
+      if (res.ok) {
+        const data = await res.json()
+        setTestResult('success')
+        setTestMessage(`Connected to ${data.team} as ${data.user}!`)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setTestResult('error')
+        setTestMessage(`Invalid token: ${data.error ?? 'check your Slack bot token'}`)
+      }
+    } catch {
+      setTestResult('error'); setTestMessage('Could not reach Slack API.')
+    } finally { setTesting(false) }
+  }
 
   function save() {
-    localStorage.setItem('outlook_ical_url', icalUrl)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    localStorage.setItem('slack_token', token)
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
   function disconnect() {
-    localStorage.removeItem('outlook_ical_url')
-    setIcalUrl('')
+    localStorage.removeItem('slack_token'); setToken(''); setTestResult(null)
   }
 
   return (
     <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
       <div className="flex items-center gap-4 p-5 border-b border-slate-100">
-        <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-2xl flex-shrink-0">
-          📅
-        </div>
+        <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-xl flex-shrink-0">🔔</div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-slate-800">Outlook / iCal Calendar</h3>
-            {isConnected && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
-                <CheckCircle size={9} /> Connected
-              </span>
-            )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-semibold text-slate-800">Slack</h3>
+            {isConnected && testResult === 'success' && <ConnectedBadge />}
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">Import any calendar via iCal subscription URL (Outlook, Apple, etc.)</p>
+          <p className="text-xs text-slate-500 mt-0.5">Channels, messages, and workspace activity</p>
         </div>
-        {isConnected && (
-          <button onClick={disconnect} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-all flex-shrink-0">
-            <X size={11} /> Remove
-          </button>
-        )}
+        {isConnected && <DisconnectButton onClick={disconnect} />}
       </div>
-
       <div className="p-5 space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">iCal Subscription URL</label>
-          <input
-            type="url"
-            value={icalUrl}
-            onChange={e => setIcalUrl(e.target.value)}
-            placeholder="https://outlook.live.com/owa/calendar/.../reachcalendar.ics"
-            className="w-full px-3 py-2.5 border border-black/[0.12] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono text-slate-700"
-          />
+        <TokenInput label="Slack Bot Token" value={token} onChange={setToken}
+          placeholder="xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
+          helpText="Starts with xoxb- — from api.slack.com/apps → your app → OAuth & Permissions → Bot User OAuth Token" />
+        <TestResult result={testResult} message={testMessage} />
+        <div className="flex gap-2">
+          <button onClick={testConnection} disabled={testing || !token}
+            className="flex items-center gap-2 px-4 py-2 border border-black/[0.12] rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all">
+            {testing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            Test Connection
+          </button>
+          <button onClick={save} disabled={!token}
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
+              saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')}>
+            {saved ? <><Check size={13} /> Saved!</> : 'Save'}
+          </button>
         </div>
-        <button
-          onClick={save}
-          disabled={!icalUrl}
-          className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
-            saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-          )}
-        >
-          {saved ? <><Check size={13} /> Saved!</> : 'Save URL'}
-        </button>
-        <p className="text-xs text-slate-400">
-          In Outlook: Calendar → Share → Publish → Copy ICS link. In Apple Calendar: right-click calendar → Get Info → copy URL.
-        </p>
+        <details className="text-xs text-slate-500">
+          <summary className="cursor-pointer font-medium text-slate-600 hover:text-slate-800">How to create a Slack bot token</summary>
+          <ol className="mt-2 space-y-1.5 pl-4">
+            <li>1. Go to <a href="https://api.slack.com/apps" target="_blank" rel="noopener" className="text-indigo-600 hover:underline">api.slack.com/apps</a> → <strong>Create New App → From scratch</strong></li>
+            <li>2. Give it a name (e.g. "Nexus") and pick your workspace</li>
+            <li>3. Go to <strong>OAuth & Permissions</strong> → under Scopes → Bot Token Scopes, add: <code className="bg-slate-100 px-1 rounded">channels:read</code>, <code className="bg-slate-100 px-1 rounded">channels:history</code>, <code className="bg-slate-100 px-1 rounded">im:read</code></li>
+            <li>4. Click <strong>Install to Workspace</strong> → allow → copy the <strong>Bot User OAuth Token</strong></li>
+          </ol>
+        </details>
       </div>
     </div>
   )
 }
 
-// ── Main Settings Page ──────────────────────────────────────────
+// ── Handshake ─────────────────────────────────────────────────
+
+function HandshakeIntegration() {
+  const [customUrl, setCustomUrl] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => { setCustomUrl(localStorage.getItem('handshake_url') ?? '') }, [])
+
+  function save() {
+    localStorage.setItem('handshake_url', customUrl || 'https://joinhandshake.com/')
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handshakeUrl = customUrl || localStorage.getItem('handshake_url') || 'https://joinhandshake.com/'
+
+  return (
+    <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-4 p-5 border-b border-slate-100">
+        <div className="w-12 h-12 rounded-2xl bg-violet-50 border border-violet-100 flex items-center justify-center text-xl flex-shrink-0">🤝</div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-slate-800">Handshake</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Jobs, internships, and career events</p>
+        </div>
+        <a href={handshakeUrl} target="_blank" rel="noopener"
+          className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg bg-violet-600 hover:bg-violet-700 transition-all flex-shrink-0">
+          Open Handshake <ExternalLink size={11} />
+        </a>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-start gap-2">
+          <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+          Handshake doesn't offer a public API for data sync. Use the button above to open Handshake directly, or save your school's custom Handshake URL below.
+        </div>
+        <TokenInput label="Your School's Handshake URL (optional)" value={customUrl} onChange={setCustomUrl}
+          placeholder="https://yourschool.joinhandshake.com/" type="url"
+          helpText="Find this by logging into Handshake — use the URL from your browser" />
+        <button onClick={save} disabled={!customUrl}
+          className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
+            saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')}>
+          {saved ? <><Check size={13} /> Saved!</> : 'Save URL'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Gradescope ────────────────────────────────────────────────
+
+function GradescopeIntegration() {
+  const [customUrl, setCustomUrl] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => { setCustomUrl(localStorage.getItem('gradescope_url') ?? '') }, [])
+
+  function save() {
+    localStorage.setItem('gradescope_url', customUrl || 'https://www.gradescope.com/')
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
+  const gradescopeUrl = customUrl || localStorage.getItem('gradescope_url') || 'https://www.gradescope.com/'
+
+  return (
+    <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-4 p-5 border-b border-slate-100">
+        <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-xl flex-shrink-0">📊</div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-slate-800">Gradescope</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Assignments, submissions, and grades</p>
+        </div>
+        <a href={gradescopeUrl} target="_blank" rel="noopener"
+          className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-lg bg-teal-600 hover:bg-teal-700 transition-all flex-shrink-0">
+          Open Gradescope <ExternalLink size={11} />
+        </a>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-start gap-2">
+          <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+          Gradescope doesn't provide a public API. Use the button above to open it directly, or save your institution's Gradescope URL below for quick access.
+        </div>
+        <TokenInput label="Your Institution's Gradescope URL (optional)" value={customUrl} onChange={setCustomUrl}
+          placeholder="https://www.gradescope.com/" type="url" />
+        <button onClick={save} disabled={!customUrl}
+          className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
+            saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')}>
+          {saved ? <><Check size={13} /> Saved!</> : 'Save URL'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Outlook iCal ──────────────────────────────────────────────
+
+function ICalIntegration() {
+  const [icalUrl, setIcalUrl] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => { setIcalUrl(localStorage.getItem('outlook_ical_url') ?? '') }, [])
+
+  function save() {
+    localStorage.setItem('outlook_ical_url', icalUrl)
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
+  function disconnect() {
+    localStorage.removeItem('outlook_ical_url'); setIcalUrl('')
+  }
+
+  const isConnected = !!localStorage.getItem('outlook_ical_url')
+
+  return (
+    <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-4 p-5 border-b border-slate-100">
+        <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-xl flex-shrink-0">📅</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-semibold text-slate-800">iCal / Outlook Calendar</h3>
+            {isConnected && <ConnectedBadge />}
+          </div>
+          <p className="text-xs text-slate-500 mt-0.5">Import any calendar via iCal URL — works with Outlook, Apple Calendar, and more</p>
+        </div>
+        {isConnected && <DisconnectButton onClick={disconnect} />}
+      </div>
+      <div className="p-5 space-y-4">
+        <TokenInput label="iCal Subscription URL" value={icalUrl} onChange={setIcalUrl}
+          placeholder="https://outlook.live.com/owa/calendar/…/reachcalendar.ics" type="url"
+          helpText="Outlook: Calendar → Share → Publish → Copy ICS link   |   Apple Calendar: right-click → Get Info → URL" />
+        <div className="flex gap-2">
+          <button onClick={save} disabled={!icalUrl}
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50',
+              saved ? 'bg-emerald-500 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')}>
+            {saved ? <><Check size={13} /> Saved!</> : 'Save URL'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Settings Page ─────────────────────────────────────────
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SectionId>('account')
@@ -412,26 +688,17 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
 
   const [aiPrefs, setAiPrefs] = useState({
-    askBeforeCalendar: true,
-    askBeforeTask: true,
-    autoSummarize: false,
-    autoClassify: false,
-    showConfidence: true,
+    askBeforeCalendar: true, askBeforeTask: true,
+    autoSummarize: false, autoClassify: false, showConfidence: true,
   })
 
   const [calRules, setCalRules] = useState({
-    syncDeadlines: true,
-    addBuffer: false,
-    noDeepWorkLate: true,
-    protectedSunday: true,
+    syncDeadlines: true, addBuffer: false, noDeepWorkLate: true, protectedSunday: true,
   })
 
   const [notifPrefs, setNotifPrefs] = useState({
-    deadlineReminders: true,
-    dailyPlanning: true,
-    weeklyReview: true,
-    overdueTasks: true,
-    driveUpdates: false,
+    deadlineReminders: true, dailyPlanning: true, weeklyReview: true,
+    overdueTasks: true, driveUpdates: false,
   })
 
   const [drivePermission, setDrivePermission] = useState('basic')
@@ -439,18 +706,11 @@ export default function SettingsPage() {
   const [schedulingMode, setSchedulingMode] = useState('semi-auto')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-          <Settings className="text-slate-500" size={24} />
-          Settings
+          <Settings className="text-slate-500" size={24} /> Settings
         </h1>
         <p className="text-slate-500 text-sm mt-1">Manage your account, integrations, and preferences</p>
       </div>
@@ -463,11 +723,8 @@ export default function SettingsPage() {
             return (
               <button key={item.id} onClick={() => setActiveSection(item.id)}
                 className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left',
-                  activeSection === item.id
-                    ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800')}>
-                <Icon size={15} />
-                {item.label}
+                  activeSection === item.id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800')}>
+                <Icon size={15} /> {item.label}
               </button>
             )
           })}
@@ -503,7 +760,7 @@ export default function SettingsPage() {
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 transition-colors" />
                   </div>
                 ))}
-                <button onClick={handleSave}
+                <button onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000) }}
                   className={cn('flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all',
                     saved ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')}>
                   {saved ? <><Check size={14} /> Saved!</> : 'Save changes'}
@@ -515,36 +772,30 @@ export default function SettingsPage() {
           {/* ── INTEGRATIONS ── */}
           {activeSection === 'integrations' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-800">Integrations</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Connect your services to sync data automatically</p>
-                </div>
+              <div>
+                <h2 className="text-base font-semibold text-slate-800">Integrations</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Connect your services to sync data automatically</p>
               </div>
 
+              {/* OAuth integrations */}
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Single Sign-On</p>
               <GoogleIntegration />
-              <CanvasIntegration />
-              <OutlookCalendarIntegration />
+              <MicrosoftIntegration />
 
-              {/* Coming soon */}
-              <div className="bg-white border border-black/[0.08] rounded-2xl p-5">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3">More integrations coming soon</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { icon: '📁', name: 'Google Drive' },
-                    { icon: '💼', name: 'Microsoft Teams' },
-                    { icon: '🤝', name: 'Handshake' },
-                    { icon: '📱', name: 'Notion' },
-                    { icon: '🔔', name: 'Slack' },
-                    { icon: '📊', name: 'Gradescope' },
-                  ].map(s => (
-                    <div key={s.name} className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl opacity-60">
-                      <span className="text-base">{s.icon}</span>
-                      <span className="text-xs font-medium text-slate-600">{s.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Token-based */}
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 pt-2">API Token</p>
+              <CanvasIntegration />
+              <NotionIntegration />
+              <SlackIntegration />
+
+              {/* Calendar import */}
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 pt-2">Calendar Import</p>
+              <ICalIntegration />
+
+              {/* Quick links */}
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 pt-2">Quick Access</p>
+              <HandshakeIntegration />
+              <GradescopeIntegration />
             </div>
           )}
 
@@ -570,8 +821,8 @@ export default function SettingsPage() {
               <div className="py-4">
                 <div className="text-sm text-slate-700 mb-1">Confidence threshold: {confidenceThreshold}%</div>
                 <div className="text-xs text-slate-400 mb-3">Items below this score will be flagged for review</div>
-                <input type="range" min={50} max={95} value={confidenceThreshold} onChange={e => setConfidenceThreshold(Number(e.target.value))}
-                  className="w-full accent-indigo-600" />
+                <input type="range" min={50} max={95} value={confidenceThreshold}
+                  onChange={e => setConfidenceThreshold(Number(e.target.value))} className="w-full accent-indigo-600" />
               </div>
               <div className="py-4 border-t border-slate-100">
                 <div className="text-sm text-slate-700 mb-3">Scheduling mode</div>
@@ -633,7 +884,6 @@ export default function SettingsPage() {
           {activeSection === 'privacy' && (
             <div className="bg-white border border-black/[0.07] rounded-2xl p-6 shadow-sm space-y-6">
               <h2 className="text-base font-semibold text-slate-800">Privacy & Data</h2>
-
               <div className="space-y-2">
                 <div className="text-sm font-medium text-slate-700">Drive permission level</div>
                 {[
@@ -653,17 +903,14 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 leading-relaxed space-y-2">
                 <div className="font-medium text-slate-700">AI Data Usage</div>
-                <p>Your data is processed securely and is never stored by third-party AI systems permanently. Content is transmitted over encrypted connections and is not used for model training.</p>
-                <p>All extracted data stays in your Nexus database and is only accessible by you.</p>
+                <p>Your data is processed securely and never stored by third-party AI systems permanently. Content is transmitted over encrypted connections and is not used for model training.</p>
               </div>
-
               <div className="space-y-3 border-t border-slate-200 pt-5">
                 <div className="text-sm font-medium text-slate-700">Data Management</div>
                 <div className="flex gap-3">
-                  <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl text-sm transition-all">
+                  <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-xl text-sm transition-all">
                     <Download size={14} /> Export my data
                   </button>
                   {!showDeleteConfirm ? (
@@ -674,8 +921,8 @@ export default function SettingsPage() {
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
                       <span className="text-xs text-red-600">Are you sure? This cannot be undone.</span>
-                      <button onClick={() => setShowDeleteConfirm(false)} className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 rounded transition-colors">Cancel</button>
-                      <button className="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all">Delete</button>
+                      <button onClick={() => setShowDeleteConfirm(false)} className="text-xs text-slate-500 px-2 py-1 rounded">Cancel</button>
+                      <button className="text-xs px-3 py-1 bg-red-600 text-white rounded-lg">Delete</button>
                     </div>
                   )}
                 </div>
