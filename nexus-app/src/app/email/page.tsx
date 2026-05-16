@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Mail, Link2, Loader2, RefreshCw, Check, AlertTriangle, Clock,
-  Reply, Forward, Archive, Star, Trash2, ChevronRight, Sparkles,
+  Reply, Forward, Archive, Star, Trash2, Sparkles,
   Inbox, Send, CheckSquare, Calendar, X,
 } from 'lucide-react'
 import { useApp } from '@/lib/store'
@@ -11,9 +11,18 @@ import { parseEmailForCalendar } from '@/lib/ai-service'
 import { cn } from '@/lib/utils'
 import type { CalendarEvent, AIInboxItem } from '@/lib/types'
 
-// ── Mock email data ────────────────────────────────────────────
+interface GmailMessage {
+  id: string
+  threadId: string
+  labelIds?: string[]
+  snippet?: string
+  payload?: {
+    headers?: { name: string; value: string }[]
+  }
+  internalDate?: string
+}
 
-interface MockEmail {
+interface Email {
   id: string
   from: string
   fromEmail: string
@@ -30,7 +39,44 @@ interface MockEmail {
   account: 'gmail' | 'outlook'
 }
 
-const MOCK_EMAILS: MockEmail[] = []
+function parseGmailMessage(msg: GmailMessage): Email {
+  const headers = msg.payload?.headers ?? []
+  const get = (name: string) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value ?? ''
+
+  const from = get('From')
+  const emailMatch = from.match(/<(.+?)>/)
+  const fromEmail = emailMatch ? emailMatch[1] : from
+  const fromName = from.replace(/<.+?>/, '').trim().replace(/^"|"$/g, '') || fromEmail
+
+  const subject = get('Subject') || '(no subject)'
+  const date = msg.internalDate ? new Date(parseInt(msg.internalDate)) : new Date()
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  const time = isToday
+    ? date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  const labels = msg.labelIds ?? []
+  const unread = labels.includes('UNREAD')
+  const important = labels.includes('IMPORTANT')
+
+  return {
+    id: msg.id,
+    from: fromName,
+    fromEmail,
+    subject,
+    preview: msg.snippet ?? '',
+    body: msg.snippet ?? '',
+    time,
+    unread,
+    starred: labels.includes('STARRED'),
+    important,
+    hasTask: subject.toLowerCase().includes('action') || subject.toLowerCase().includes('task') || subject.toLowerCase().includes('todo'),
+    hasEvent: subject.toLowerCase().includes('invite') || subject.toLowerCase().includes('meeting') || subject.toLowerCase().includes('event') || subject.toLowerCase().includes('zoom'),
+    needsReply: unread && important,
+    account: 'gmail',
+  }
+}
 
 const ACCOUNT_COLORS = { gmail: 'text-red-500 bg-red-50', outlook: 'text-blue-500 bg-blue-50' }
 
@@ -39,13 +85,13 @@ export default function EmailPage() {
 
   const [gmailConnected, setGmailConnected] = useState(false)
   const [outlookConnected, setOutlookConnected] = useState(false)
-  const [connectingGmail, setConnectingGmail] = useState(false)
-  const [connectingOutlook, setConnectingOutlook] = useState(false)
+  const [loadingGmail, setLoadingGmail] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [syncDone, setSyncDone] = useState(false)
+  const [gmailEmail, setGmailEmail] = useState('')
 
-  const [emails, setEmails] = useState<MockEmail[]>(MOCK_EMAILS)
-  const [selected, setSelected] = useState<MockEmail | null>(null)
+  const [emails, setEmails] = useState<Email[]>([])
+  const [selected, setSelected] = useState<Email | null>(null)
   const [filter, setFilter] = useState<'all' | 'unread' | 'important' | 'starred'>('all')
   const [parsedEvent, setParsedEvent] = useState<Awaited<ReturnType<typeof parseEmailForCalendar>> | null>(null)
   const [parsing, setParsing] = useState(false)
@@ -54,29 +100,45 @@ export default function EmailPage() {
 
   const anyConnected = gmailConnected || outlookConnected
 
-  async function connectGmail() {
-    setConnectingGmail(true)
-    await new Promise(r => setTimeout(r, 1600))
-    setGmailConnected(true)
-    setConnectingGmail(false)
+  async function fetchGmail() {
+    const res = await fetch('/api/google/gmail?maxResults=30')
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.messages as GmailMessage[] | null
   }
 
-  async function connectOutlook() {
-    setConnectingOutlook(true)
-    await new Promise(r => setTimeout(r, 1600))
-    setOutlookConnected(true)
-    setConnectingOutlook(false)
-  }
+  useEffect(() => {
+    setLoadingGmail(true)
+    fetchGmail().then(messages => {
+      if (messages) {
+        setGmailConnected(true)
+        setEmails(messages.map(parseGmailMessage))
+        // Try to get email from cookie (non-httpOnly)
+        const cookieEmail = document.cookie.split('; ').find(r => r.startsWith('google_email='))?.split('=')[1]
+        if (cookieEmail) setGmailEmail(decodeURIComponent(cookieEmail))
+      }
+    }).finally(() => setLoadingGmail(false))
+  }, [])
 
   async function handleSync() {
     setSyncing(true)
-    await new Promise(r => setTimeout(r, 1500))
+    const messages = await fetchGmail()
+    if (messages) {
+      setGmailConnected(true)
+      setEmails(messages.map(parseGmailMessage))
+    }
     setSyncing(false)
     setSyncDone(true)
     setTimeout(() => setSyncDone(false), 3000)
   }
 
-  async function handleExtractEvent(email: MockEmail) {
+  async function connectOutlook() {
+    // Outlook OAuth not wired yet — placeholder
+    setOutlookConnected(false)
+    alert('Outlook connection coming soon. Add your Outlook iCal URL in Settings to sync your Outlook calendar.')
+  }
+
+  async function handleExtractEvent(email: Email) {
     setParsing(true)
     setParsedEvent(null)
     const result = await parseEmailForCalendar(`Subject: ${email.subject}\n\n${email.body}`)
@@ -84,7 +146,7 @@ export default function EmailPage() {
     setParsing(false)
   }
 
-  function handleAddToCalendar(email: MockEmail) {
+  function handleAddToCalendar(email: Email) {
     if (!parsedEvent) return
     const event: CalendarEvent = {
       id: `ev-email-${Date.now()}`,
@@ -103,7 +165,7 @@ export default function EmailPage() {
     setParsedEvent(null)
   }
 
-  function handleSendToInbox(email: MockEmail) {
+  function handleSendToInbox(email: Email) {
     const item: AIInboxItem = {
       id: `ai-email-${Date.now()}`,
       user_id: '1',
@@ -137,7 +199,6 @@ export default function EmailPage() {
 
   const unreadCount = emails.filter(e => e.unread).length
   const importantCount = emails.filter(e => e.important).length
-  const needsReplyCount = emails.filter(e => e.needsReply && !e.unread === false).length
 
   return (
     <div className="space-y-6">
@@ -168,22 +229,25 @@ export default function EmailPage() {
               <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-xl">📧</div>
               <div>
                 <p className="font-semibold text-slate-900 text-sm">Gmail</p>
-                {gmailConnected
-                  ? <p className="text-xs text-emerald-600">Connected · laura@university.edu</p>
-                  : <p className="text-xs text-slate-400">Not connected</p>}
+                {loadingGmail
+                  ? <p className="text-xs text-slate-400">Checking connection…</p>
+                  : gmailConnected
+                    ? <p className="text-xs text-emerald-600">Connected{gmailEmail ? ` · ${gmailEmail}` : ''}</p>
+                    : <p className="text-xs text-slate-400">Not connected — sign in with Google to link Gmail</p>}
               </div>
             </div>
-            {gmailConnected ? (
+            {loadingGmail ? (
+              <Loader2 size={16} className="animate-spin text-slate-400" />
+            ) : gmailConnected ? (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <button onClick={() => setGmailConnected(false)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">Disconnect</button>
               </div>
             ) : (
-              <button onClick={connectGmail} disabled={connectingGmail}
-                className="flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-70 text-white rounded-xl text-xs font-medium transition-all shadow-sm">
-                {connectingGmail ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
-                {connectingGmail ? 'Connecting…' : 'Connect Gmail'}
-              </button>
+              <a href="/login"
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-medium transition-all shadow-sm">
+                <Link2 size={12} />
+                Sign in with Google
+              </a>
             )}
           </div>
           {gmailConnected && (
@@ -203,8 +267,8 @@ export default function EmailPage() {
               <div>
                 <p className="font-semibold text-slate-900 text-sm">Outlook</p>
                 {outlookConnected
-                  ? <p className="text-xs text-emerald-600">Connected · laura@student.edu</p>
-                  : <p className="text-xs text-slate-400">Not connected</p>}
+                  ? <p className="text-xs text-emerald-600">Connected</p>
+                  : <p className="text-xs text-slate-400">Use iCal URL in Settings for Outlook calendar</p>}
               </div>
             </div>
             {outlookConnected ? (
@@ -213,20 +277,13 @@ export default function EmailPage() {
                 <button onClick={() => setOutlookConnected(false)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">Disconnect</button>
               </div>
             ) : (
-              <button onClick={connectOutlook} disabled={connectingOutlook}
-                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-70 text-white rounded-xl text-xs font-medium transition-all shadow-sm">
-                {connectingOutlook ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
-                {connectingOutlook ? 'Connecting…' : 'Connect Outlook'}
-              </button>
+              <a href="/settings"
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium transition-all shadow-sm">
+                <Link2 size={12} />
+                Add iCal URL
+              </a>
             )}
           </div>
-          {outlookConnected && (
-            <div className="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-emerald-200">
-              <div className="text-center"><p className="text-lg font-bold text-slate-900">{emails.filter(e => e.account === 'outlook' && e.unread).length}</p><p className="text-xs text-slate-400">Unread</p></div>
-              <div className="text-center"><p className="text-lg font-bold text-slate-900">{emails.filter(e => e.account === 'outlook' && e.needsReply).length}</p><p className="text-xs text-slate-400">Need reply</p></div>
-              <div className="text-center"><p className="text-lg font-bold text-slate-900">{emails.filter(e => e.account === 'outlook' && e.important).length}</p><p className="text-xs text-slate-400">Important</p></div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -252,16 +309,24 @@ export default function EmailPage() {
         </div>
       )}
 
-      {/* Inbox — only show if connected */}
-      {!anyConnected ? (
+      {/* Inbox */}
+      {loadingGmail ? (
+        <div className="bg-white border border-black/[0.07] rounded-2xl p-12 text-center shadow-sm">
+          <Loader2 size={28} className="animate-spin text-indigo-400 mx-auto mb-3" />
+          <p className="text-slate-500 text-sm">Checking Gmail connection…</p>
+        </div>
+      ) : !anyConnected ? (
         <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center shadow-sm">
           <div className="w-14 h-14 rounded-2xl bg-violet-50 border border-violet-100 flex items-center justify-center mx-auto mb-4">
             <Mail size={28} className="text-violet-500" />
           </div>
           <h2 className="text-lg font-semibold text-slate-800 mb-1">Connect your inbox</h2>
-          <p className="text-slate-500 text-sm max-w-md mx-auto">
-            Link Gmail or Outlook to see unread emails, get notified about important messages, and send emails directly to your Nexus calendar and task list.
+          <p className="text-slate-500 text-sm max-w-md mx-auto mb-4">
+            Sign in with Google to automatically connect Gmail, or add an Outlook iCal URL in Settings to sync your calendar.
           </p>
+          <a href="/login" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm">
+            Sign in with Google
+          </a>
         </div>
       ) : (
         <div className="bg-white border border-black/[0.07] rounded-2xl shadow-sm overflow-hidden">
@@ -285,7 +350,6 @@ export default function EmailPage() {
                 onClick={() => { setSelected(email === selected ? null : email); markRead(email.id); setParsedEvent(null) }}
                 className={cn('px-5 py-4 cursor-pointer transition-colors hover:bg-slate-50', selected?.id === email.id && 'bg-indigo-50/40', email.unread && 'bg-white')}>
                 <div className="flex items-start gap-3">
-                  {/* Unread dot */}
                   <div className={cn('w-2 h-2 rounded-full mt-2 flex-shrink-0', email.unread ? 'bg-indigo-500' : 'bg-transparent')} />
 
                   <div className="flex-1 min-w-0">
@@ -305,7 +369,6 @@ export default function EmailPage() {
                     <p className={cn('text-sm truncate', email.unread ? 'text-slate-800 font-medium' : 'text-slate-600')}>{email.subject}</p>
                     <p className="text-xs text-slate-400 truncate mt-0.5">{email.preview}</p>
 
-                    {/* Quick action badges */}
                     <div className="flex items-center gap-2 mt-2">
                       {email.hasEvent && <span className="text-[10px] px-2 py-0.5 bg-violet-50 text-violet-700 border border-violet-200 rounded-full font-medium flex items-center gap-1"><Calendar size={9} /> Has event</span>}
                       {email.hasTask && <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium flex items-center gap-1"><CheckSquare size={9} /> Has task</span>}
@@ -332,15 +395,14 @@ export default function EmailPage() {
                       {email.body}
                     </div>
 
-                    {/* Action buttons */}
                     <div className="flex flex-wrap items-center gap-2">
-                      {email.hasEvent && !addedToCalendar.has(email.id) && (
+                      {(email.hasEvent || email.hasTask) && !addedToCalendar.has(email.id) && (
                         <>
                           {!parsedEvent ? (
                             <button onClick={() => handleExtractEvent(email)} disabled={parsing}
                               className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white rounded-xl text-xs font-semibold transition-all shadow-sm">
                               {parsing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                              {parsing ? 'Extracting…' : 'Extract Event'}
+                              {parsing ? 'Extracting with AI…' : 'Extract Event with AI'}
                             </button>
                           ) : (
                             <button onClick={() => handleAddToCalendar(email)}
@@ -372,7 +434,7 @@ export default function EmailPage() {
                     {parsedEvent && !addedToCalendar.has(email.id) && (
                       <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-violet-700 flex items-center gap-1.5"><Sparkles size={11} /> Extracted Event</span>
+                          <span className="text-xs font-semibold text-violet-700 flex items-center gap-1.5"><Sparkles size={11} /> AI Extracted Event</span>
                           <button onClick={() => setParsedEvent(null)} className="text-violet-400 hover:text-violet-600"><X size={13} /></button>
                         </div>
                         <p className="text-sm font-semibold text-slate-800">{parsedEvent.title}</p>

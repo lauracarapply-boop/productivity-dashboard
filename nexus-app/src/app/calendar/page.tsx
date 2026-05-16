@@ -117,6 +117,10 @@ export default function CalendarPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncDone, setSyncDone] = useState(false)
 
+  // Google Calendar
+  const [googleEvents, setGoogleEvents] = useState<ICalEvent[]>([])
+  const [googleConnected, setGoogleConnected] = useState(false)
+
   useEffect(() => {
     const stored = localStorage.getItem('ical_url')
     if (stored) setIcalUrl(stored)
@@ -143,6 +147,37 @@ export default function CalendarPage() {
     if (icalUrl) fetchIcal(icalUrl)
   }, [icalUrl, fetchIcal])
 
+  useEffect(() => {
+    const now = new Date()
+    const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7).toISOString()
+    const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 60).toISOString()
+    fetch(`/api/google/calendar?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.items) return
+        const mapped: ICalEvent[] = data.items.map((ev: {
+          id: string; summary?: string;
+          start: { dateTime?: string; date?: string };
+          end: { dateTime?: string; date?: string };
+          location?: string; description?: string;
+        }) => {
+          const allDay = !ev.start.dateTime
+          return {
+            id: ev.id,
+            title: ev.summary ?? '(no title)',
+            start: ev.start.dateTime ?? ev.start.date ?? '',
+            end: ev.end.dateTime ?? ev.end.date ?? '',
+            location: ev.location ?? '',
+            description: ev.description ?? '',
+            allDay,
+          }
+        })
+        setGoogleEvents(mapped)
+        setGoogleConnected(true)
+      })
+      .catch(() => {})
+  }, [])
+
   async function handleSync() {
     setSyncing(true)
     setSyncDone(false)
@@ -156,12 +191,14 @@ export default function CalendarPage() {
     return calendarEvents.filter(e => isSameDay(new Date(e.start_time), dayDate))
   }
 
+  const allExternalEvents = [...icalEvents, ...googleEvents]
+
   function getIcalEventsForDay(dayDate: Date): ICalEvent[] {
-    return icalEvents.filter(e => isSameDay(new Date(e.start), dayDate) && !e.allDay)
+    return allExternalEvents.filter(e => isSameDay(new Date(e.start), dayDate) && !e.allDay)
   }
 
   function getAllDayEventsForDay(dayDate: Date): ICalEvent[] {
-    return icalEvents.filter(e => {
+    return allExternalEvents.filter(e => {
       if (!e.allDay) return false
       const s = new Date(e.start)
       const en = new Date(e.end)
@@ -236,6 +273,15 @@ export default function CalendarPage() {
           </button>
         </div>
       </div>
+
+      {/* Google Calendar status banner */}
+      {googleConnected && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+          <div className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 animate-pulse" />
+          <span className="text-sm text-indigo-700 font-medium">Google Calendar connected</span>
+          <span className="text-xs text-indigo-600 ml-1">· {googleEvents.length} events loaded</span>
+        </div>
+      )}
 
       {/* Outlook status banner */}
       {icalLoading && (
